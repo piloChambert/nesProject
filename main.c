@@ -146,8 +146,8 @@ void main(void) {
         WaitFrame();
 
         // reset scroll
-        PPU.scroll = 0x00;
-        PPU.scroll = 0x00;
+        PPU.scroll = player.x;
+        PPU.scroll = player.y;
 
         if (InputPort1 & BUTTON_UP) {
             if (player.y > 0) {
