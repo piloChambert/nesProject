@@ -634,7 +634,7 @@ _player:
 	sta     _i+1
 L0235:	ldx     _i+1
 	cpx     #$04
-	bcc     L02CB
+	bcc     L02CC
 ;
 ; }
 ;
@@ -642,7 +642,7 @@ L0235:	ldx     _i+1
 ;
 ; mapX = (i & 0x1F) >> 1;
 ;
-L02CB:	lda     _i
+L02CC:	lda     _i
 	ldx     #$00
 	and     #$1F
 	lsr     a
@@ -658,7 +658,7 @@ L02CB:	lda     _i
 	sta     _mapY
 	stx     _mapY+1
 ;
-; tileIndex = map[mapX + (mapY << 6)] << 1;
+; tileIndex = (map[mapX + (mapY << 6)] & 39) << 1;
 ;
 	lda     _mapY
 	ldx     _mapY+1
@@ -673,12 +673,13 @@ L02CB:	lda     _i
 	adc     #>(_map)
 	sta     ptr1+1
 	ldy     #<(_map)
-	ldx     #$00
 	lda     (ptr1),y
+	ldx     #$00
+	and     #$27
 	asl     a
-	bcc     L02C9
+	bcc     L02CA
 	inx
-L02C9:	sta     _tileIndex
+L02CA:	sta     _tileIndex
 	stx     _tileIndex+1
 ;
 ; if((i >> 5) & 0x1) {
@@ -688,7 +689,7 @@ L02C9:	sta     _tileIndex
 	jsr     shrax4
 	jsr     shrax1
 	and     #$01
-	beq     L0248
+	beq     L0249
 ;
 ; tileIndex += 16;
 ;
@@ -696,24 +697,24 @@ L02C9:	sta     _tileIndex
 	clc
 	adc     _tileIndex
 	sta     _tileIndex
-	bcc     L0248
+	bcc     L0249
 	inc     _tileIndex+1
 ;
 ; if(i & 0x1) {
 ;
-L0248:	lda     _i
+L0249:	lda     _i
 	and     #$01
-	beq     L02CA
+	beq     L02CB
 ;
 ; ++tileIndex;
 ;
 	inc     _tileIndex
-	bne     L02CA
+	bne     L02CB
 	inc     _tileIndex+1
 ;
 ; PPU.vram.data = (uint8_t)tileIndex;
 ;
-L02CA:	lda     _tileIndex
+L02CB:	lda     _tileIndex
 	sta     $2007
 ;
 ; for(i = 0; i < 1024; i++) {
@@ -755,12 +756,12 @@ L023D:	sta     _i
 ;
 	sta     _i
 	sta     _i+1
-L025C:	lda     _i+1
+L025D:	lda     _i+1
 	cmp     #$00
-	bne     L0264
+	bne     L0265
 	lda     _i
 	cmp     #$20
-L0264:	bcs     L025D
+L0265:	bcs     L025E
 ;
 ; PPU.vram.data = PALETTE[i];
 ;
@@ -777,13 +778,13 @@ L0264:	bcs     L025D
 ; for ( i = 0; i < sizeof(PALETTE); ++i ) {
 ;
 	inc     _i
-	bne     L025C
+	bne     L025D
 	inc     _i+1
-	jmp     L025C
+	jmp     L025D
 ;
 ; drawBackground();
 ;
-L025D:	jsr     _drawBackground
+L025E:	jsr     _drawBackground
 ;
 ; PPU.vram.address = 0x23;
 ;
@@ -800,12 +801,12 @@ L025D:	jsr     _drawBackground
 	lda     #$00
 	sta     _i
 	sta     _i+1
-L0272:	lda     _i+1
+L0273:	lda     _i+1
 	cmp     #$00
-	bne     L0279
+	bne     L027A
 	lda     _i
 	cmp     #$40
-L0279:	bcs     L0273
+L027A:	bcs     L0274
 ;
 ; PPU.vram.data = i & 0x0F;
 ;
@@ -819,15 +820,15 @@ L0279:	bcs     L0273
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L027B
+	bcc     L027C
 	inx
-L027B:	sta     _i
+L027C:	sta     _i
 	stx     _i+1
-	jmp     L0272
+	jmp     L0273
 ;
 ; player.x = 20;
 ;
-L0273:	lda     #$14
+L0274:	lda     #$14
 	sta     _player+3
 ;
 ; player.y = 20;
@@ -864,7 +865,7 @@ L0273:	lda     #$14
 ;
 ; WaitFrame();
 ;
-L0294:	jsr     _WaitFrame
+L0295:	jsr     _WaitFrame
 ;
 ; PPU.scroll = 0;
 ;
@@ -879,12 +880,12 @@ L0294:	jsr     _WaitFrame
 ;
 	lda     _InputPort1
 	and     #$08
-	beq     L02CC
+	beq     L02CD
 ;
 ; if (player.y > 0) {
 ;
 	lda     _player
-	beq     L02CC
+	beq     L02CD
 ;
 ; --player.y;
 ;
@@ -894,7 +895,7 @@ L0294:	jsr     _WaitFrame
 ;
 	lda     _inputPort1Old
 	and     #$08
-	bne     L02CC
+	bne     L02CD
 ;
 ; APU.pulse[0].control = 0x0F;
 ;
@@ -918,15 +919,15 @@ L0294:	jsr     _WaitFrame
 ;
 ; if (InputPort1 & BUTTON_DOWN) {
 ;
-L02CC:	lda     _InputPort1
+L02CD:	lda     _InputPort1
 	and     #$04
-	beq     L02CD
+	beq     L02CE
 ;
 ; if (player.y < 255) {
 ;
 	lda     _player
 	cmp     #$FF
-	bcs     L02CD
+	bcs     L02CE
 ;
 ; ++player.y;
 ;
@@ -934,14 +935,14 @@ L02CC:	lda     _InputPort1
 ;
 ; if (InputPort1 & BUTTON_LEFT) {
 ;
-L02CD:	lda     _InputPort1
+L02CE:	lda     _InputPort1
 	and     #$02
-	beq     L02CE
+	beq     L02CF
 ;
 ; if (player.x > 0) {
 ;
 	lda     _player+3
-	beq     L02CE
+	beq     L02CF
 ;
 ; --player.x;
 ;
@@ -949,15 +950,15 @@ L02CD:	lda     _InputPort1
 ;
 ; if (InputPort1 & BUTTON_RIGHT) {
 ;
-L02CE:	lda     _InputPort1
+L02CF:	lda     _InputPort1
 	and     #$01
-	beq     L02CF
+	beq     L02D0
 ;
 ; if (player.x < 255) {
 ;
 	lda     _player+3
 	cmp     #$FF
-	bcs     L02CF
+	bcs     L02D0
 ;
 ; ++player.x;
 ;
@@ -965,12 +966,12 @@ L02CE:	lda     _InputPort1
 ;
 ; inputPort1Old = InputPort1;
 ;
-L02CF:	lda     _InputPort1
+L02D0:	lda     _InputPort1
 	sta     _inputPort1Old
 ;
 ; while (1) {
 ;
-	jmp     L0294
+	jmp     L0295
 
 .endproc
 
