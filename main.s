@@ -12,8 +12,8 @@
 	.macpack	longbranch
 	.forceimport	__STARTUP__
 	.importzp	_InputPort1
-	.importzp	_InputPort1Prev
 	.importzp	_VRAMUpdateReady
+	.importzp	_SplitEnable
 	.importzp	_Scroll
 	.import		_WaitFrame
 	.export		_i
@@ -22,9 +22,13 @@
 	.export		_mapX
 	.export		_mapY
 	.export		_tileIndex
+	.export		_playerX
+	.export		_playerY
+	.export		_playerSpeedX
+	.export		_relativePlayerX
 	.export		_score
 	.export		_spriteZero
-	.export		_player
+	.export		_playerSprites
 	.export		_ScoreText
 	.export		_PALETTE
 	.export		_mapWidth
@@ -35,6 +39,12 @@
 
 .segment	"DATA"
 
+_playerX:
+	.word	$0000
+_playerY:
+	.word	$0000
+_playerSpeedX:
+	.byte	$00
 _score:
 	.word	$152D
 
@@ -43,35 +53,35 @@ _score:
 _ScoreText:
 	.byte	$53,$63,$6F,$72,$65,$2E,$00
 _PALETTE:
-	.byte	$0F
+	.byte	$22
 	.byte	$00
 	.byte	$10
 	.byte	$20
-	.byte	$0F
+	.byte	$22
 	.byte	$11
 	.byte	$21
 	.byte	$31
-	.byte	$0F
+	.byte	$22
 	.byte	$15
 	.byte	$25
 	.byte	$35
-	.byte	$0F
+	.byte	$22
 	.byte	$19
 	.byte	$29
 	.byte	$39
-	.byte	$0F
-	.byte	$06
-	.byte	$15
-	.byte	$36
-	.byte	$0F
+	.byte	$22
+	.byte	$16
+	.byte	$05
+	.byte	$27
+	.byte	$22
 	.byte	$11
 	.byte	$21
 	.byte	$31
-	.byte	$0F
+	.byte	$22
 	.byte	$15
 	.byte	$25
 	.byte	$35
-	.byte	$0F
+	.byte	$22
 	.byte	$19
 	.byte	$29
 	.byte	$39
@@ -510,12 +520,14 @@ _mapY:
 	.res	2,$00
 _tileIndex:
 	.res	2,$00
+_relativePlayerX:
+	.res	2,$00
 .segment	"BSS"
 .segment	"OAM"
 _spriteZero:
 	.res	4,$00
-_player:
-	.res	4,$00
+_playerSprites:
+	.res	16,$00
 .segment	"BSS"
 
 ; ---------------------------------------------------------------
@@ -544,12 +556,12 @@ _player:
 	lda     #$00
 	sta     _i
 	sta     _i+1
-L01D7:	lda     _i+1
+L01DC:	lda     _i+1
 	cmp     #$00
-	bne     L01DF
+	bne     L01E4
 	lda     _i
 	cmp     #$07
-L01DF:	bcs     L01D8
+L01E4:	bcs     L01DD
 ;
 ; PPU.vram.data = ScoreText[i];
 ;
@@ -569,15 +581,15 @@ L01DF:	bcs     L01D8
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L01E1
+	bcc     L01E6
 	inx
-L01E1:	sta     _i
+L01E6:	sta     _i
 	stx     _i+1
-	jmp     L01D7
+	jmp     L01DC
 ;
 ; }
 ;
-L01D8:	rts
+L01DD:	rts
 
 .endproc
 
@@ -607,12 +619,12 @@ L01D8:	rts
 	lda     #$00
 	sta     _i
 	sta     _i+1
-L01ED:	lda     _i+1
+L01F2:	lda     _i+1
 	cmp     #$03
-	bne     L01F4
+	bne     L01F9
 	lda     _i
 	cmp     #$40
-L01F4:	jcs     L01EE
+L01F9:	jcs     L01F3
 ;
 ; mapX = (i & 0x1F) >> 1;
 ;
@@ -651,9 +663,9 @@ L01F4:	jcs     L01EE
 	ldx     #$00
 	and     #$27
 	asl     a
-	bcc     L0299
+	bcc     L02E1
 	inx
-L0299:	sta     _tileIndex
+L02E1:	sta     _tileIndex
 	stx     _tileIndex+1
 ;
 ; if((i >> 5) & 0x1) {
@@ -663,7 +675,7 @@ L0299:	sta     _tileIndex
 	jsr     shrax4
 	jsr     shrax1
 	and     #$01
-	beq     L0202
+	beq     L0207
 ;
 ; tileIndex += 16;
 ;
@@ -671,24 +683,24 @@ L0299:	sta     _tileIndex
 	clc
 	adc     _tileIndex
 	sta     _tileIndex
-	bcc     L0202
+	bcc     L0207
 	inc     _tileIndex+1
 ;
 ; if(i & 0x1) {
 ;
-L0202:	lda     _i
+L0207:	lda     _i
 	and     #$01
-	beq     L029A
+	beq     L02E2
 ;
 ; ++tileIndex;
 ;
 	inc     _tileIndex
-	bne     L029A
+	bne     L02E2
 	inc     _tileIndex+1
 ;
 ; PPU.vram.data = (uint8_t)tileIndex;
 ;
-L029A:	lda     _tileIndex
+L02E2:	lda     _tileIndex
 	sta     $2007
 ;
 ; for(i = 0; i < 32 * 26; i++) {
@@ -697,15 +709,15 @@ L029A:	lda     _tileIndex
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L01F6
+	bcc     L01FB
 	inx
-L01F6:	sta     _i
+L01FB:	sta     _i
 	stx     _i+1
-	jmp     L01ED
+	jmp     L01F2
 ;
 ; PPU.vram.address = 0x23;
 ;
-L01EE:	lda     #$23
+L01F3:	lda     #$23
 	sta     $2006
 ;
 ; PPU.vram.address = 0xC0;
@@ -718,12 +730,12 @@ L01EE:	lda     #$23
 	lda     #$00
 	sta     _i
 	sta     _i+1
-L0215:	lda     _i+1
+L021A:	lda     _i+1
 	cmp     #$00
-	bne     L021C
+	bne     L0221
 	lda     _i
 	cmp     #$40
-L021C:	bcs     L0216
+L0221:	bcs     L021B
 ;
 ; PPU.vram.data = i & 0x0F;
 ;
@@ -737,15 +749,15 @@ L021C:	bcs     L0216
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L021E
+	bcc     L0223
 	inx
-L021E:	sta     _i
+L0223:	sta     _i
 	stx     _i+1
-	jmp     L0215
+	jmp     L021A
 ;
 ; }
 ;
-L0216:	rts
+L021B:	rts
 
 .endproc
 
@@ -774,12 +786,12 @@ L0216:	rts
 ;
 	sta     _i
 	sta     _i+1
-L0229:	lda     _i+1
+L022E:	lda     _i+1
 	cmp     #$00
-	bne     L0231
+	bne     L0236
 	lda     _i
 	cmp     #$20
-L0231:	bcs     L022A
+L0236:	bcs     L022F
 ;
 ; PPU.vram.data = PALETTE[i];
 ;
@@ -796,13 +808,13 @@ L0231:	bcs     L022A
 ; for ( i = 0; i < sizeof(PALETTE); ++i ) {
 ;
 	inc     _i
-	bne     L0229
+	bne     L022E
 	inc     _i+1
-	jmp     L0229
+	jmp     L022E
 ;
 ; drawStatus();
 ;
-L022A:	jsr     _drawStatus
+L022F:	jsr     _drawStatus
 ;
 ; drawBackground();
 ;
@@ -810,7 +822,8 @@ L022A:	jsr     _drawStatus
 ;
 ; Scroll = 0;
 ;
-	lda     #$00
+	ldx     #$00
+	txa
 	sta     _Scroll
 	sta     _Scroll+1
 ;
@@ -829,19 +842,65 @@ L022A:	jsr     _drawStatus
 	lda     #$FF
 	sta     _spriteZero+1
 ;
-; player.x = 20;
+; playerSprites[0].x = 0;
 ;
-	lda     #$14
-	sta     _player+3
+	txa
+	sta     _playerSprites+3
 ;
-; player.y = 20;
+; playerSprites[0].y = 0;
 ;
-	sta     _player
+	sta     _playerSprites
 ;
-; player.tile_index = 0x0;
+; playerSprites[0].tile_index = 0x00;
 ;
-	lda     #$00
-	sta     _player+1
+	sta     _playerSprites+1
+;
+; playerSprites[1].x = 0;
+;
+	sta     _playerSprites+7
+;
+; playerSprites[1].y = 0;
+;
+	sta     _playerSprites+4
+;
+; playerSprites[1].tile_index = 0x01;
+;
+	lda     #$01
+	sta     _playerSprites+5
+;
+; playerSprites[2].x = 0;
+;
+	txa
+	sta     _playerSprites+11
+;
+; playerSprites[2].y = 0;
+;
+	sta     _playerSprites+8
+;
+; playerSprites[2].tile_index = 0x10;
+;
+	lda     #$10
+	sta     _playerSprites+9
+;
+; playerSprites[3].x = 0;
+;
+	txa
+	sta     _playerSprites+15
+;
+; playerSprites[3].y = 0;
+;
+	sta     _playerSprites+12
+;
+; playerSprites[3].tile_index = 0x11;
+;
+	lda     #$11
+	sta     _playerSprites+13
+;
+; playerX = 32;
+;
+	lda     #$20
+	sta     _playerX
+	stx     _playerX+1
 ;
 ; VRAMUpdateReady = 1;
 ;
@@ -853,7 +912,7 @@ L022A:	jsr     _drawStatus
 	lda     #$88
 	sta     $2000
 ;
-; PPU.mask = PPUMASK_COLOR | PPUMASK_L8_BSHOW | PPUMASK_L8_SSHOW | PPUMASK_SSHOW | PPUMASK_BSHOW;
+; PPU.mask = PPUMASK_L8_BSHOW | PPUMASK_L8_SSHOW | PPUMASK_SSHOW | PPUMASK_BSHOW;
 ;
 	lda     #$1E
 	sta     $2001
@@ -863,166 +922,245 @@ L022A:	jsr     _drawStatus
 	lda     #$0F
 	sta     $4015
 ;
-; WaitFrame();
+; Scroll = 0;
 ;
-L0253:	jsr     _WaitFrame
-;
-; if(PPU.status & 0x40) {
-;
-	lda     $2002
-	and     #$40
-	beq     L029B
-;
-; player.tile_index = 0xFF;
-;
-	lda     #$FF
-;
-; player.tile_index = 0x00;            
-;
-L029B:	sta     _player+1
-;
-; if (InputPort1 & BUTTON_UP) {
-;
-	lda     _InputPort1
-	and     #$08
-	beq     L029E
-;
-; if (player.y > 0) {
-;
-	lda     _player
-	beq     L029E
-;
-; --player.y;
-;
-	dec     _player
-;
-; if(!(InputPort1Prev & BUTTON_UP)) {
-;
-	lda     _InputPort1Prev
-	and     #$08
-	bne     L029E
-;
-; APU.pulse[0].control = 0x0F;
-;
-	lda     #$0F
-	sta     $4000
-;
-; APU.pulse[0].ramp = 0x01;
-;
-	lda     #$01
-	sta     $4001
-;
-; APU.pulse[0].period_low = 0x05;
-;
-	lda     #$05
-	sta     $4002
-;
-; APU.pulse[0].len_period_high = (0x0F << 5) + 0x01;
-;
-	lda     #$E1
-	sta     $4003
-;
-; if (InputPort1 & BUTTON_DOWN) {
-;
-L029E:	lda     _InputPort1
-	and     #$04
-	beq     L029F
-;
-; if (player.y < 255) {
-;
-	lda     _player
-	cmp     #$FF
-	bcs     L029F
-;
-; ++player.y;
-;
-	inc     _player
-;
-; if (InputPort1 & BUTTON_LEFT) {
-;
-L029F:	lda     _InputPort1
-	and     #$02
-	beq     L02A0
-;
-; if (player.x > 0) {
-;
-	lda     _player+3
-	beq     L0281
-;
-; --player.x;
-;
-	dec     _player+3
-;
-; if(Scroll == 0x0000) {
-;
-L0281:	lda     _Scroll
-	ora     _Scroll+1
-	bne     L0284
-;
-; Scroll = 0x01FF;
-;
-	ldx     #$01
-	lda     #$FF
-	sta     _Scroll
-	stx     _Scroll+1
-;
-; } else {
-;
-	jmp     L02A0
-;
-; --Scroll;
-;
-L0284:	lda     _Scroll
-	sec
-	sbc     #$01
-	sta     _Scroll
-	bcs     L02A0
-	dec     _Scroll+1
-;
-; if (InputPort1 & BUTTON_RIGHT) {
-;
-L02A0:	lda     _InputPort1
-	and     #$01
-	beq     L02A1
-;
-; if (player.x < 255) {
-;
-	lda     _player+3
-	cmp     #$FF
-	bcs     L028E
-;
-; ++player.x;
-;
-	inc     _player+3
-;
-; ++Scroll;
-;
-L028E:	inc     _Scroll
-	bne     L0292
-	inc     _Scroll+1
-;
-; if(Scroll > 0x200) {
-;
-L0292:	lda     _Scroll
-	cmp     #$01
-	lda     _Scroll+1
-	sbc     #$02
-	bcc     L02A1
-;
-; Scroll = 0x0000;
-;
-	lda     #$00
+	txa
 	sta     _Scroll
 	sta     _Scroll+1
 ;
+; SplitEnable = 1;
+;
+	lda     #$01
+	sta     _SplitEnable
+;
+; WaitFrame();
+;
+L027C:	jsr     _WaitFrame
+;
+; if(InputPort1 & BUTTON_UP) {
+;
+	lda     _InputPort1
+	and     #$08
+	beq     L02E8
+;
+; if (playerY > 0) {
+;
+	lda     _playerY
+	ora     _playerY+1
+	beq     L02E8
+;
+; --playerY;
+;
+	lda     _playerY
+	sec
+	sbc     #$01
+	sta     _playerY
+	bcs     L02E8
+	dec     _playerY+1
+;
+; if(InputPort1 & BUTTON_DOWN) {
+;
+L02E8:	lda     _InputPort1
+	and     #$04
+	beq     L02E9
+;
+; if (playerY < 240) {
+;
+	lda     _playerY+1
+	cmp     #$00
+	bne     L028C
+	lda     _playerY
+	cmp     #$F0
+L028C:	bcs     L02E9
+;
+; ++playerY;
+;
+	inc     _playerY
+	bne     L02E9
+	inc     _playerY+1
+;
+; if(InputPort1 & BUTTON_LEFT) {
+;
+L02E9:	lda     _InputPort1
+	and     #$02
+	beq     L02EA
+;
+; if (playerSpeedX > -8) {
+;
+	lda     _playerSpeedX
+	sec
+	sbc     #$F9
+	bvs     L0294
+	eor     #$80
+L0294:	bpl     L02AC
+;
+; --playerSpeedX;
+;
+	dec     _playerSpeedX
+	bpl     L02AC
+;
+; } else if(InputPort1 & BUTTON_RIGHT) {
+;
+	jmp     L02AC
+L02EA:	lda     _InputPort1
+	and     #$01
+	beq     L02EB
+;
+; if (playerSpeedX < 8) {
+;
+	lda     _playerSpeedX
+	sec
+	sbc     #$08
+	bvc     L029D
+	eor     #$80
+L029D:	bpl     L02AC
+;
+; ++playerSpeedX;
+;
+	inc     _playerSpeedX
+	bpl     L02AC
+;
+; } else if(playerSpeedX > 0) {
+;
+	jmp     L02AC
+L02EB:	lda     _playerSpeedX
+	sec
+	sbc     #$01
+	bvs     L02A4
+	eor     #$80
+L02A4:	bpl     L02EC
+;
+; --playerSpeedX;
+;
+	dec     _playerSpeedX
+	bpl     L02AC
+;
+; } else if(playerSpeedX < 0) {
+;
+	jmp     L02AC
+L02EC:	lda     _playerSpeedX
+	asl     a
+	bcc     L02AC
+;
+; ++playerSpeedX;
+;
+	inc     _playerSpeedX
+;
+; if((playerX < Scroll + 32 && Scroll > 0) || (playerX > Scroll + 256 - 32 && Scroll < 256)) {
+;
+L02AC:	lda     _playerX
+	ldx     _playerX+1
+	jsr     pushax
+	lda     _Scroll
+	ldx     _Scroll+1
+	clc
+	adc     #$20
+	bcc     L02B0
+	inx
+L02B0:	jsr     tosicmp
+	bcs     L02E3
+	lda     _Scroll
+	ora     _Scroll+1
+	bne     L02F6
+L02E3:	lda     _playerX
+	ldx     _playerX+1
+	jsr     pushax
+	lda     _Scroll
+	ldx     _Scroll+1
+	inx
+	sec
+	sbc     #$20
+	bcs     L02B5
+	dex
+L02B5:	jsr     tosicmp
+	bcc     L02F5
+	beq     L02F5
+	ldx     _Scroll+1
+	cpx     #$01
+	bcs     L02F5
+L02F6:	ldx     #$00
+;
+; Scroll += playerSpeedX;
+;
+	lda     _playerSpeedX
+	cmp     #$80
+	bcc     L02E6
+	dex
+	clc
+L02E6:	adc     _Scroll
+	sta     _Scroll
+	txa
+	adc     _Scroll+1
+	sta     _Scroll+1
+;
+; playerX += playerSpeedX;
+;
+L02F5:	ldx     #$00
+	lda     _playerSpeedX
+	cmp     #$80
+	bcc     L02E7
+	dex
+	clc
+L02E7:	adc     _playerX
+	sta     _playerX
+	txa
+	adc     _playerX+1
+	sta     _playerX+1
+;
+; relativePlayerX = playerX - Scroll;
+;
+	lda     _playerX
+	sec
+	sbc     _Scroll
+	sta     _relativePlayerX
+	lda     _playerX+1
+	sbc     _Scroll+1
+	sta     _relativePlayerX+1
+;
+; playerSprites[0].x = relativePlayerX; playerSprites[0].y = playerY;
+;
+	lda     _relativePlayerX
+	sta     _playerSprites+3
+	lda     _playerY
+	sta     _playerSprites
+;
+; playerSprites[1].x = relativePlayerX + 8; playerSprites[1].y = playerY;
+;
+	lda     _relativePlayerX
+	clc
+	adc     #$08
+	sta     _playerSprites+7
+	lda     _playerY
+	sta     _playerSprites+4
+;
+; playerSprites[2].x = relativePlayerX; playerSprites[2].y = playerY + 8;
+;
+	lda     _relativePlayerX
+	sta     _playerSprites+11
+	lda     _playerY
+	clc
+	adc     #$08
+	sta     _playerSprites+8
+;
+; playerSprites[3].x = relativePlayerX + 8; playerSprites[3].y = playerY + 8;
+;
+	lda     _relativePlayerX
+	clc
+	adc     #$08
+	sta     _playerSprites+15
+	lda     _playerY
+	clc
+	adc     #$08
+	sta     _playerSprites+12
+;
 ; VRAMUpdateReady = 1;
 ;
-L02A1:	lda     #$01
+	lda     #$01
 	sta     _VRAMUpdateReady
 ;
 ; while (1) {
 ;
-	jmp     L0253
+	jmp     L027C
 
 .endproc
 

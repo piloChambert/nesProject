@@ -15,7 +15,7 @@
 #define PPUCTRL_BPATTERN_0  0x00 // background pattern table 0
 #define PPUCTRL_BPATTERN_1  0x10 // background pattern table 1
 #define PPUCTRL_SSIZE_8x8   0x00 // 8x8 sprite size
-#define PPUCTRL_SSIZE_16x16 0x20 // 16x16 sprite size
+#define PPUCTRL_SSIZE_8x16  0x20 // 8x16 sprite size
 #define PPUCTRL_NMI_OFF     0x00 // disable NMIs
 #define PPUCTRL_NMI_ON      0x80 // enable NMIs
 
@@ -74,6 +74,9 @@ extern uint8_t InputPort2Prev;
 extern uint8_t VRAMUpdateReady;
 #pragma zpsym("VRAMUpdateReady");
 
+extern uint8_t SplitEnable;
+#pragma zpsym("SplitEnable");
+
 extern uint16_t Scroll;
 #pragma zpsym("Scroll");
 
@@ -82,25 +85,29 @@ void WaitFrame(void);
 
 #pragma bss-name(push, "ZEROPAGE")
 size_t i, x, y, mapX, mapY, tileIndex;
+uint16_t playerX = 0, playerY = 0;
+int8_t playerSpeedX = 0;
+uint16_t relativePlayerX; // use to store screen space player X
 uint16_t score = 5421;
+
 #pragma bss-name(pop)
 
 #pragma bss-name(push, "OAM")
 sprite_t spriteZero;
-sprite_t player;
+sprite_t playerSprites[4];
 #pragma bss-name(pop)
 
 
 const char ScoreText[] = "Score.";
 
-const uint8_t PALETTE[] = { 0x0F, 0x00, 0x10, 0x20,
-                            0x0F, 0x11, 0x21, 0x31,
-                            0x0F, 0x15, 0x25, 0x35,
-                            0x0F, 0x19, 0x29, 0x39,
-                            0x0F, 0x06, 0x15, 0x36,
-                            0x0F, 0x11, 0x21, 0x31,
-                            0x0F, 0x15, 0x25, 0x35,
-                            0x0F, 0x19, 0x29, 0x39 };
+const uint8_t PALETTE[] = { 0x22, 0x00, 0x10, 0x20,
+                            0x22, 0x11, 0x21, 0x31,
+                            0x22, 0x15, 0x25, 0x35,
+                            0x22, 0x19, 0x29, 0x39,
+                            0x22, 0x16, 0x05, 0x27,
+                            0x22, 0x11, 0x21, 0x31,
+                            0x22, 0x15, 0x25, 0x35,
+                            0x22, 0x19, 0x29, 0x39 };
 
 const uint8_t mapWidth = 32; // tiles count
 const uint8_t map[] = { 0x04, 0x01, 0x02, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -177,10 +184,23 @@ void main(void) {
     spriteZero.tile_index = 0xFF;
 
     // init player sprite
-    player.x = 20;
-    player.y = 20;
-    player.tile_index = 0x0;
+    playerSprites[0].x = 0;
+    playerSprites[0].y = 0;
+    playerSprites[0].tile_index = 0x00;
 
+    playerSprites[1].x = 0;
+    playerSprites[1].y = 0;
+    playerSprites[1].tile_index = 0x01;
+
+    playerSprites[2].x = 0;
+    playerSprites[2].y = 0;
+    playerSprites[2].tile_index = 0x10;
+
+    playerSprites[3].x = 0;
+    playerSprites[3].y = 0;
+    playerSprites[3].tile_index = 0x11;
+
+    playerX = 32;
 
 
     // tells the NMI to update
@@ -190,63 +210,60 @@ void main(void) {
 
     // enable NMI and rendering
     PPU.control = PPUCTRL_NAMETABLE_0 | PPUCTRL_INC_1_HORIZ | PPUCTRL_BPATTERN_0 | PPUCTRL_SPATTERN_1 | PPUCTRL_NMI_ON;
-    PPU.mask = PPUMASK_COLOR | PPUMASK_L8_BSHOW | PPUMASK_L8_SSHOW | PPUMASK_SSHOW | PPUMASK_BSHOW;
+    PPU.mask = PPUMASK_L8_BSHOW | PPUMASK_L8_SSHOW | PPUMASK_SSHOW | PPUMASK_BSHOW;
 
     APU.status = 0x0F;
 
+    Scroll = 0;
+    SplitEnable = 1;
 
     // infinite loop
     while (1) {
         WaitFrame();
-        
-        if(PPU.status & 0x40) {
-            player.tile_index = 0xFF;
-        } else {
-            player.tile_index = 0x00;            
-        }
 
-        if (InputPort1 & BUTTON_UP) {
-            if (player.y > 0) {
-                --player.y;
-
-                if(!(InputPort1Prev & BUTTON_UP)) {
-                    APU.pulse[0].control = 0x0F;
-                    APU.pulse[0].ramp = 0x01;
-                    APU.pulse[0].period_low = 0x05;
-                    APU.pulse[0].len_period_high = (0x0F << 5) + 0x01;
-                }
+        if(InputPort1 & BUTTON_UP) {
+            if (playerY > 0) {
+                --playerY;
             }
         }
 
-        if (InputPort1 & BUTTON_DOWN) {
-            if (player.y < 255) {
-                ++player.y;
+        if(InputPort1 & BUTTON_DOWN) {
+            if (playerY < 240) {
+                ++playerY;
             }
         }
 
-        if (InputPort1 & BUTTON_LEFT) {
-            if (player.x > 0) {
-                --player.x;
+        if(InputPort1 & BUTTON_LEFT) {
+            if (playerSpeedX > -8) {
+                --playerSpeedX;
             }
-
-            if(Scroll == 0x0000) {
-                Scroll = 0x01FF;
-            } else {
-                --Scroll;
+        } else if(InputPort1 & BUTTON_RIGHT) {
+            if (playerSpeedX < 8) {
+                ++playerSpeedX;
             }
-
+        } else if(playerSpeedX > 0) {
+            --playerSpeedX;
+        } else if(playerSpeedX < 0) {
+            ++playerSpeedX;
         }
 
-        if (InputPort1 & BUTTON_RIGHT) {
-            if (player.x < 255) {
-                ++player.x;
-            }
-
-            ++Scroll;
-            if(Scroll > 0x200) {
-                Scroll = 0x0000;
-            }
+        if(playerX < Scroll + 32 && Scroll > 0)
+            Scroll -= 2;
         }
+
+
+        if(playerX > Scroll + 256 - 32 && Scroll < 256) {
+            Scroll += 2;
+        }
+
+        playerX += playerSpeedX;
+
+        // update player sprites
+        relativePlayerX = playerX - Scroll;
+        playerSprites[0].x = relativePlayerX; playerSprites[0].y = playerY;
+        playerSprites[1].x = relativePlayerX + 8; playerSprites[1].y = playerY;
+        playerSprites[2].x = relativePlayerX; playerSprites[2].y = playerY + 8;
+        playerSprites[3].x = relativePlayerX + 8; playerSprites[3].y = playerY + 8;
 
         // tells the NMI to update
         VRAMUpdateReady = 1;

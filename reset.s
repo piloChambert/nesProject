@@ -3,12 +3,13 @@
 .import _main
 .export __STARTUP__:absolute=1
 .export _WaitFrame
-.exportzp _FrameCount, _InputPort1, _InputPort1Prev, _InputPort2, _InputPort2Prev, _VRAMUpdateReady, _Scroll
+.exportzp _FrameCount, _InputPort1, _InputPort1Prev, _InputPort2, _InputPort2Prev, _VRAMUpdateReady, _SplitEnable, _Scroll
 
 ; linker-generated symbols
 
-.import __STACK_START__, __STACK_SIZE__
+.import __STACK_SIZE__
 .import __OAM_LOAD__
+.import __RAM_START__   ,__RAM_SIZE__
 .include "zeropage.inc"
 
 ; definitions
@@ -33,6 +34,7 @@ INPUT_2       = $4017
 _FrameCount:       .res 1
 frame_done:        .res 1
 _VRAMUpdateReady:  .res 1
+_SplitEnable:      .res 1 ; enable or disable split scroll
 _Scroll:           .res 2
 
 ; Input handling
@@ -134,10 +136,10 @@ start:
     sta OAM_DMA
 
     ; set the C stack pointer
-    lda #<(__STACK_START__ + __STACK_SIZE__)
+    lda #<(__RAM_START__+__RAM_SIZE__)
     sta sp
-    lda #>(__STACK_START__ + __STACK_SIZE__)
-    sta sp+1
+    lda #>(__RAM_START__+__RAM_SIZE__)
+    sta sp+1            ; Set argument stack ptr
 
     lda PPU_STATUS ; reset the PPU latch
 
@@ -212,34 +214,34 @@ ReadInput:
 ; Push OAM changes via DMA, increment frame counter, and release _WaitFrame
 nmi:
     ; save registers to stack
-    pha
-    txa
-    pha
-    tya
-    pha
+    PHA
+    TXA
+    PHA
+    TYA
+    PHA
 
     ; test VRAM ready flag
-    lda _VRAMUpdateReady
-    beq @postVRAMUpdate
+    LDA _VRAMUpdateReady
+    BEQ @postVRAMUpdate
 
     ; start OAM DMA
-    lda #0
-    sta OAM_ADDRESS
-    lda #>(__OAM_LOAD__)
-    sta OAM_DMA
+    LDA #0
+    STA OAM_ADDRESS
+    LDA #>(__OAM_LOAD__)
+    STA OAM_DMA
 
 
 @postVRAMUpdate:
     ; clear VRAM ready flag
-    lda #0
-    sta _VRAMUpdateReady    
+    LDA #0
+    STA _VRAMUpdateReady    
 
     ; increment frame counter
-    inc _FrameCount
+    INC _FrameCount
 
     ; release _WaitFrame
-    lda #0
-    sta frame_done
+    LDA #0
+    STA frame_done
 
     ; reset PPU address
     LDA #$00 
@@ -253,7 +255,12 @@ nmi:
     LDA #%1001000 ; enable NMI, bg on table 0 and sprite on table 1
     STA PPU_CTRL
 
-    ; Sprite 0 hit detection
+    LDA #%00011110 ; 
+    STA PPU_MASK
+
+    ; Sprite 0 hit detection for split scroll
+    LDA _SplitEnable
+    BEQ Scroll
 Sprite0:
     LDA $2002
     AND #$40
@@ -264,12 +271,13 @@ Sprite0b:
     BEQ Sprite0b
 
     ; wait
-    LDX #$20
+    LDX #$FF
 WaitScanline:
     DEX
     BNE WaitScanline
 
     ; scrolling
+Scroll:
     lda _Scroll
     sta PPU_SCROLL
     lda #0
@@ -278,6 +286,9 @@ WaitScanline:
     lda _Scroll + 1
     ora #$88
     sta PPU_CTRL
+
+    ;LDA #%00011111 ; gray the scrolled part of the screen
+    ;STA PPU_MASK
 
     ; restore registers and return
     pla
