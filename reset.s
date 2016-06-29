@@ -16,6 +16,8 @@ PPU_CTRL      = $2000
 PPU_MASK      = $2001
 PPU_STATUS    = $2002
 PPU_SCROLL    = $2005
+PPU_ADDR      = $2006
+PPU_DATA      = $2007
 OAM_ADDRESS   = $2003
 OAM_DMA       = $4014
 APU_DMC       = $4010
@@ -51,7 +53,7 @@ temp2:             .res 1
 .byte $4e, $45, $53, $1a ; "NES" followed by MS-DOS EOF
 .byte $01                ; size of PRG ROM in 16 KiB units
 .byte $01                ; size of CHR ROM in 8 KiB units
-.byte $01                ; horizontal mirroring, mapper 000 (NROM)
+.byte $01                ; vertical mirroring, mapper 000 (NROM)
 .byte $00                ; mapper 000 (NROM)
 .byte $00                ; size of PRG RAM in 8 KiB units
 .byte $00                ; NTSC
@@ -143,14 +145,14 @@ start:
 
 
 _WaitFrame:
-    inc frame_done
+    INC frame_done
 @loop:
-    lda frame_done
-    bne @loop
+    LDA frame_done
+    BNE @loop
 
-    jsr UpdateInput
+    JSR UpdateInput
 
-    rts
+    RTS
 
 ; Read Standard Controller input
 ; Keep track of last state to detect button up/down transitions
@@ -218,7 +220,7 @@ nmi:
 
     ; test VRAM ready flag
     lda _VRAMUpdateReady
-    beq @finish
+    beq @postVRAMUpdate
 
     ; start OAM DMA
     lda #0
@@ -227,7 +229,7 @@ nmi:
     sta OAM_DMA
 
 
-@finish:
+@postVRAMUpdate:
     ; clear VRAM ready flag
     lda #0
     sta _VRAMUpdateReady    
@@ -239,11 +241,43 @@ nmi:
     lda #0
     sta frame_done
 
+    ; reset PPU address
+    LDA #$00 
+    STA PPU_ADDR
+    STA PPU_ADDR
+
+    ; set scroll to 0,0
+    STA PPU_SCROLL
+    STA PPU_SCROLL
+
+    LDA #%1001000 ; enable NMI, bg on table 0 and sprite on table 1
+    STA PPU_CTRL
+
+    ; Sprite 0 hit detection
+Sprite0:
+    LDA $2002
+    AND #$40
+    BNE Sprite0
+Sprite0b:
+    LDA $2002
+    AND #$40
+    BEQ Sprite0b
+
+    ; wait
+    LDX #$20
+WaitScanline:
+    DEX
+    BNE WaitScanline
+
     ; scrolling
     lda _Scroll
     sta PPU_SCROLL
     lda #0
     sta PPU_SCROLL
+
+    lda _Scroll + 1
+    ora #$88
+    sta PPU_CTRL
 
     ; restore registers and return
     pla
