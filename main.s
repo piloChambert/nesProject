@@ -26,6 +26,7 @@
 	.export		_playerX
 	.export		_playerY
 	.export		_playerSpeedX
+	.export		_playerYOffset
 	.export		_relativePlayerX
 	.export		_score
 	.export		_spriteZero
@@ -45,6 +46,8 @@ _playerX:
 _playerY:
 	.word	$0000
 _playerSpeedX:
+	.byte	$00
+_playerYOffset:
 	.byte	$00
 _score:
 	.word	$152D
@@ -97,6 +100,16 @@ _map:
 	.byte	$00
 	.byte	$00
 	.byte	$00
+	.byte	$01
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$01
 	.byte	$00
 	.byte	$00
 	.byte	$00
@@ -111,16 +124,38 @@ _map:
 	.byte	$00
 	.byte	$00
 	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
+	.byte	$01
+	.byte	$01
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
+	.byte	$04
 	.byte	$01
 	.byte	$04
 	.byte	$04
@@ -153,38 +188,6 @@ _map:
 	.byte	$04
 	.byte	$04
 	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
 	.byte	$01
 	.byte	$04
 	.byte	$04
@@ -217,21 +220,21 @@ _map:
 	.byte	$04
 	.byte	$04
 	.byte	$04
+	.byte	$01
+	.byte	$01
+	.byte	$04
+	.byte	$01
 	.byte	$04
 	.byte	$04
 	.byte	$04
 	.byte	$04
 	.byte	$04
 	.byte	$04
+	.byte	$01
 	.byte	$04
 	.byte	$04
 	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
+	.byte	$01
 	.byte	$04
 	.byte	$04
 	.byte	$04
@@ -557,12 +560,12 @@ _playerSprites:
 	lda     #$00
 	sta     _i
 	sta     _i+1
-L01DC:	lda     _i+1
+L01DD:	lda     _i+1
 	cmp     #$00
-	bne     L01E4
+	bne     L01E5
 	lda     _i
 	cmp     #$07
-L01E4:	bcs     L01DD
+L01E5:	bcs     L01DE
 ;
 ; PPU.vram.data = ScoreText[i];
 ;
@@ -582,15 +585,15 @@ L01E4:	bcs     L01DD
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L01E6
+	bcc     L01E7
 	inx
-L01E6:	sta     _i
+L01E7:	sta     _i
 	stx     _i+1
-	jmp     L01DC
+	jmp     L01DD
 ;
 ; }
 ;
-L01DD:	rts
+L01DE:	rts
 
 .endproc
 
@@ -620,12 +623,12 @@ L01DD:	rts
 	lda     #$00
 	sta     _i
 	sta     _i+1
-L01F2:	lda     _i+1
+L01F3:	lda     _i+1
 	cmp     #$03
-	bne     L01F9
+	bne     L01FA
 	lda     _i
 	cmp     #$40
-L01F9:	jcs     L01F3
+L01FA:	jcs     L01F4
 ;
 ; mapX = (i & 0x1F) >> 1;
 ;
@@ -645,28 +648,29 @@ L01F9:	jcs     L01F3
 	sta     _mapY
 	stx     _mapY+1
 ;
-; tileIndex = (map[mapX + (mapY << 6)] & 39) << 1;
+; tileIndex = map[mapX + (mapY << 5)] << 1;
 ;
 	lda     _mapY
 	ldx     _mapY+1
 	jsr     shlax4
-	jsr     shlax2
+	stx     tmp1
+	asl     a
+	rol     tmp1
 	clc
 	adc     _mapX
 	sta     ptr1
-	txa
+	lda     tmp1
 	adc     _mapX+1
 	clc
 	adc     #>(_map)
 	sta     ptr1+1
 	ldy     #<(_map)
-	lda     (ptr1),y
 	ldx     #$00
-	and     #$27
+	lda     (ptr1),y
 	asl     a
-	bcc     L02FA
+	bcc     L0302
 	inx
-L02FA:	sta     _tileIndex
+L0302:	sta     _tileIndex
 	stx     _tileIndex+1
 ;
 ; if((i >> 5) & 0x1) {
@@ -691,17 +695,17 @@ L02FA:	sta     _tileIndex
 ;
 L0207:	lda     _i
 	and     #$01
-	beq     L02FB
+	beq     L0303
 ;
 ; ++tileIndex;
 ;
 	inc     _tileIndex
-	bne     L02FB
+	bne     L0303
 	inc     _tileIndex+1
 ;
 ; PPU.vram.data = (uint8_t)tileIndex;
 ;
-L02FB:	lda     _tileIndex
+L0303:	lda     _tileIndex
 	sta     $2007
 ;
 ; for(i = 0; i < 32 * 26; i++) {
@@ -710,15 +714,15 @@ L02FB:	lda     _tileIndex
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L01FB
+	bcc     L01FC
 	inx
-L01FB:	sta     _i
+L01FC:	sta     _i
 	stx     _i+1
-	jmp     L01F2
+	jmp     L01F3
 ;
 ; PPU.vram.address = 0x23;
 ;
-L01F3:	lda     #$23
+L01F4:	lda     #$23
 	sta     $2006
 ;
 ; PPU.vram.address = 0xC0;
@@ -738,10 +742,9 @@ L021A:	lda     _i+1
 	cmp     #$40
 L0221:	bcs     L021B
 ;
-; PPU.vram.data = i & 0x0F;
+; PPU.vram.data = 0x00;
 ;
-	lda     _i
-	and     #$0F
+	lda     #$00
 	sta     $2007
 ;
 ; for(i = 0; i < 64; i++) {
@@ -942,13 +945,13 @@ L027C:	jsr     _WaitFrame
 ;
 	lda     _InputPort1
 	and     #$08
-	beq     L02FE
+	beq     L0306
 ;
 ; if (playerY > 0) {
 ;
 	lda     _playerY
 	ora     _playerY+1
-	beq     L02FE
+	beq     L0306
 ;
 ; --playerY;
 ;
@@ -956,14 +959,14 @@ L027C:	jsr     _WaitFrame
 	sec
 	sbc     #$01
 	sta     _playerY
-	bcs     L02FE
+	bcs     L0306
 	dec     _playerY+1
 ;
 ; if(InputPort1 & BUTTON_DOWN) {
 ;
-L02FE:	lda     _InputPort1
+L0306:	lda     _InputPort1
 	and     #$04
-	beq     L02FF
+	beq     L0307
 ;
 ; if (playerY < 240) {
 ;
@@ -972,19 +975,19 @@ L02FE:	lda     _InputPort1
 	bne     L028C
 	lda     _playerY
 	cmp     #$F0
-L028C:	bcs     L02FF
+L028C:	bcs     L0307
 ;
 ; ++playerY;
 ;
 	inc     _playerY
-	bne     L02FF
+	bne     L0307
 	inc     _playerY+1
 ;
 ; if(InputPort1 & BUTTON_LEFT) {
 ;
-L02FF:	lda     _InputPort1
+L0307:	lda     _InputPort1
 	and     #$02
-	beq     L0300
+	beq     L0308
 ;
 ; if (playerSpeedX > -8) {
 ;
@@ -1003,9 +1006,9 @@ L0294:	bpl     L02AC
 ; } else if(InputPort1 & BUTTON_RIGHT) {
 ;
 	jmp     L02AC
-L0300:	lda     _InputPort1
+L0308:	lda     _InputPort1
 	and     #$01
-	beq     L0301
+	beq     L0309
 ;
 ; if (playerSpeedX < 8) {
 ;
@@ -1024,12 +1027,12 @@ L029D:	bpl     L02AC
 ; } else if(playerSpeedX > 0) {
 ;
 	jmp     L02AC
-L0301:	lda     _playerSpeedX
+L0309:	lda     _playerSpeedX
 	sec
 	sbc     #$01
 	bvs     L02A4
 	eor     #$80
-L02A4:	bpl     L0302
+L02A4:	bpl     L030A
 ;
 ; --playerSpeedX;
 ;
@@ -1039,7 +1042,7 @@ L02A4:	bpl     L0302
 ; } else if(playerSpeedX < 0) {
 ;
 	jmp     L02AC
-L0302:	lda     _playerSpeedX
+L030A:	lda     _playerSpeedX
 	asl     a
 	bcc     L02AC
 ;
@@ -1106,10 +1109,10 @@ L02B8:	jsr     tosicmp
 L02BD:	ldx     #$00
 	lda     _playerSpeedX
 	cmp     #$80
-	bcc     L02FD
+	bcc     L0305
 	dex
 	clc
-L02FD:	adc     _playerX
+L0305:	adc     _playerX
 	sta     _playerX
 	txa
 	adc     _playerX+1
@@ -1125,59 +1128,106 @@ L02FD:	adc     _playerX
 	sbc     _Scroll+1
 	sta     _relativePlayerX+1
 ;
-; playerSprites[0].x = relativePlayerX; playerSprites[0].y = playerY; playerSprites[0].tile_index = ((FrameCount >> 3) & 0x01) ? 0x00 : 0x02;
+; playerYOffset = (FrameCount & 0x07);
+;
+	lda     _FrameCount
+	and     #$07
+	cmp     #$80
+	sta     _playerYOffset
+;
+; playerSprites[0].x = relativePlayerX; playerSprites[0].y = playerY + playerYOffset; playerSprites[0].tile_index = ((FrameCount >> 3) & 0x01) ? 0x00 : 0x02;
 ;
 	lda     _relativePlayerX
 	sta     _playerSprites+3
-	lda     _playerY
+	ldx     #$00
+	lda     _playerYOffset
+	bpl     L02CE
+	dex
+L02CE:	clc
+	adc     _playerY
 	sta     _playerSprites
+	txa
+	adc     _playerY+1
 	lda     _FrameCount
 	lsr     a
 	lsr     a
 	lsr     a
 	and     #$01
-	beq     L0305
+	beq     L030D
 	lda     #$00
-	jmp     L0306
-L0305:	lda     #$02
-L0306:	sta     _playerSprites+1
+	jmp     L030E
+L030D:	lda     #$02
+L030E:	sta     _playerSprites+1
 ;
-; playerSprites[1].x = relativePlayerX + 8; playerSprites[1].y = playerY; playerSprites[1].tile_index = playerSprites[0].tile_index + 0x01;
+; playerSprites[1].x = relativePlayerX + 8; playerSprites[1].y = playerY + playerYOffset; playerSprites[1].tile_index = playerSprites[0].tile_index + 0x01;
 ;
 	lda     _relativePlayerX
 	clc
 	adc     #$08
 	sta     _playerSprites+7
-	lda     _playerY
+	ldx     #$00
+	lda     _playerYOffset
+	bpl     L02DF
+	dex
+L02DF:	clc
+	adc     _playerY
 	sta     _playerSprites+4
+	txa
+	adc     _playerY+1
 	lda     _playerSprites+1
 	clc
 	adc     #$01
 	sta     _playerSprites+5
 ;
-; playerSprites[2].x = relativePlayerX; playerSprites[2].y = playerY + 8; playerSprites[2].tile_index = playerSprites[0].tile_index + 0x10;
+; playerSprites[2].x = relativePlayerX; playerSprites[2].y = playerY + 8 + playerYOffset; playerSprites[2].tile_index = playerSprites[0].tile_index + 0x10;
 ;
 	lda     _relativePlayerX
 	sta     _playerSprites+11
 	lda     _playerY
+	ldx     _playerY+1
 	clc
 	adc     #$08
+	bcc     L02EB
+	inx
+L02EB:	sta     ptr1
+	stx     ptr1+1
+	ldx     #$00
+	lda     _playerYOffset
+	bpl     L02EC
+	dex
+L02EC:	clc
+	adc     ptr1
 	sta     _playerSprites+8
+	txa
+	adc     ptr1+1
 	lda     _playerSprites+1
 	clc
 	adc     #$10
 	sta     _playerSprites+9
 ;
-; playerSprites[3].x = relativePlayerX + 8; playerSprites[3].y = playerY + 8; playerSprites[3].tile_index = playerSprites[0].tile_index + 0x11;
+; playerSprites[3].x = relativePlayerX + 8; playerSprites[3].y = playerY + 8 + playerYOffset; playerSprites[3].tile_index = playerSprites[0].tile_index + 0x11;
 ;
 	lda     _relativePlayerX
 	clc
 	adc     #$08
 	sta     _playerSprites+15
 	lda     _playerY
+	ldx     _playerY+1
 	clc
 	adc     #$08
+	bcc     L02F9
+	inx
+L02F9:	sta     ptr1
+	stx     ptr1+1
+	ldx     #$00
+	lda     _playerYOffset
+	bpl     L02FA
+	dex
+L02FA:	clc
+	adc     ptr1
 	sta     _playerSprites+12
+	txa
+	adc     ptr1+1
 	lda     _playerSprites+1
 	clc
 	adc     #$11
