@@ -12,7 +12,9 @@
 	.macpack	longbranch
 	.forceimport	__STARTUP__
 	.importzp	_InputPort1
-	.export		_inputPort1Old
+	.importzp	_InputPort1Prev
+	.importzp	_VRAMUpdateReady
+	.importzp	_Scroll
 	.import		_WaitFrame
 	.export		_i
 	.export		_x
@@ -20,28 +22,20 @@
 	.export		_mapX
 	.export		_mapY
 	.export		_tileIndex
-	.export		_scroll
 	.export		_score
 	.export		_player
 	.export		_ScoreText
 	.export		_PALETTE
 	.export		_mapWidth
 	.export		_map
-	.export		_a
 	.export		_drawStatus
 	.export		_drawBackground
 	.export		_main
 
 .segment	"DATA"
 
-_inputPort1Old:
-	.byte	$00
-_scroll:
-	.word	$0000
 _score:
 	.word	$152D
-_a:
-	.word	$2710
 
 .segment	"RODATA"
 
@@ -515,12 +509,12 @@ _player:
 	lda     #$00
 	sta     _i
 	sta     _i+1
-L01B8:	lda     _i+1
+L01B7:	lda     _i+1
 	cmp     #$00
-	bne     L01C0
+	bne     L01BF
 	lda     _i
 	cmp     #$06
-L01C0:	bcs     L01B9
+L01BF:	bcs     L01B8
 ;
 ; PPU.vram.data = ScoreText[i];
 ;
@@ -540,53 +534,15 @@ L01C0:	bcs     L01B9
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L01C2
+	bcc     L01C1
 	inx
-L01C2:	sta     _i
+L01C1:	sta     _i
 	stx     _i+1
-	jmp     L01B8
-;
-; a = 10000;
-;
-L01B9:	ldx     #$27
-	lda     #$10
-	sta     _a
-	stx     _a+1
-;
-; PPU.vram.address = 0x20;
-;
-	lda     #$20
-	sta     $2006
-;
-; PPU.vram.address = 0x60 + 0x04;    
-;
-	lda     #$64
-	sta     $2006
-;
-; for(i = 0; i < 3; i++) {
-;
-	lda     #$00
-	sta     _i
-	sta     _i+1
-L01CF:	lda     _i+1
-	cmp     #$00
-	bne     L01D6
-	lda     _i
-	cmp     #$03
-L01D6:	bcs     L01D0
-	lda     _i
-	ldx     _i+1
-	clc
-	adc     #$01
-	bcc     L01D8
-	inx
-L01D8:	sta     _i
-	stx     _i+1
-	jmp     L01CF
+	jmp     L01B7
 ;
 ; }
 ;
-L01D0:	rts
+L01B8:	rts
 
 .endproc
 
@@ -616,12 +572,12 @@ L01D0:	rts
 	lda     #$00
 	sta     _i
 	sta     _i+1
-L01E0:	lda     _i+1
+L01CD:	lda     _i+1
 	cmp     #$00
-	bne     L01E7
+	bne     L01D4
 	lda     _i
 	cmp     #$40
-L01E7:	jcs     L01E1
+L01D4:	jcs     L01CE
 ;
 ; mapX = (i & 0x1F) >> 1;
 ;
@@ -660,9 +616,9 @@ L01E7:	jcs     L01E1
 	ldx     #$00
 	and     #$27
 	asl     a
-	bcc     L028A
+	bcc     L026E
 	inx
-L028A:	sta     _tileIndex
+L026E:	sta     _tileIndex
 	stx     _tileIndex+1
 ;
 ; if((i >> 5) & 0x1) {
@@ -672,7 +628,7 @@ L028A:	sta     _tileIndex
 	jsr     shrax4
 	jsr     shrax1
 	and     #$01
-	beq     L01F5
+	beq     L01E2
 ;
 ; tileIndex += 16;
 ;
@@ -680,24 +636,24 @@ L028A:	sta     _tileIndex
 	clc
 	adc     _tileIndex
 	sta     _tileIndex
-	bcc     L01F5
+	bcc     L01E2
 	inc     _tileIndex+1
 ;
 ; if(i & 0x1) {
 ;
-L01F5:	lda     _i
+L01E2:	lda     _i
 	and     #$01
-	beq     L028B
+	beq     L026F
 ;
 ; ++tileIndex;
 ;
 	inc     _tileIndex
-	bne     L028B
+	bne     L026F
 	inc     _tileIndex+1
 ;
 ; PPU.vram.data = (uint8_t)tileIndex;
 ;
-L028B:	lda     _tileIndex
+L026F:	lda     _tileIndex
 	sta     $2007
 ;
 ; for(i = 0; i < 64; i++) {
@@ -706,15 +662,15 @@ L028B:	lda     _tileIndex
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L01E9
+	bcc     L01D6
 	inx
-L01E9:	sta     _i
+L01D6:	sta     _i
 	stx     _i+1
-	jmp     L01E0
+	jmp     L01CD
 ;
 ; PPU.vram.address = 0x23;
 ;
-L01E1:	lda     #$23
+L01CE:	lda     #$23
 	sta     $2006
 ;
 ; PPU.vram.address = 0xC0;
@@ -727,12 +683,12 @@ L01E1:	lda     #$23
 	lda     #$00
 	sta     _i
 	sta     _i+1
-L0208:	lda     _i+1
+L01F5:	lda     _i+1
 	cmp     #$00
-	bne     L020F
+	bne     L01FC
 	lda     _i
 	cmp     #$40
-L020F:	bcs     L0209
+L01FC:	bcs     L01F6
 ;
 ; PPU.vram.data = i & 0x0F;
 ;
@@ -746,15 +702,15 @@ L020F:	bcs     L0209
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L0211
+	bcc     L01FE
 	inx
-L0211:	sta     _i
+L01FE:	sta     _i
 	stx     _i+1
-	jmp     L0208
+	jmp     L01F5
 ;
 ; }
 ;
-L0209:	rts
+L01F6:	rts
 
 .endproc
 
@@ -783,12 +739,12 @@ L0209:	rts
 ;
 	sta     _i
 	sta     _i+1
-L021C:	lda     _i+1
+L0209:	lda     _i+1
 	cmp     #$00
-	bne     L0224
+	bne     L0211
 	lda     _i
 	cmp     #$20
-L0224:	bcs     L021D
+L0211:	bcs     L020A
 ;
 ; PPU.vram.data = PALETTE[i];
 ;
@@ -805,17 +761,23 @@ L0224:	bcs     L021D
 ; for ( i = 0; i < sizeof(PALETTE); ++i ) {
 ;
 	inc     _i
-	bne     L021C
+	bne     L0209
 	inc     _i+1
-	jmp     L021C
+	jmp     L0209
 ;
 ; drawStatus();
 ;
-L021D:	jsr     _drawStatus
+L020A:	jsr     _drawStatus
 ;
 ; drawBackground();
 ;
 	jsr     _drawBackground
+;
+; Scroll = 0;
+;
+	lda     #$00
+	sta     _Scroll
+	sta     _Scroll+1
 ;
 ; player.x = 20;
 ;
@@ -856,46 +818,28 @@ L021D:	jsr     _drawStatus
 ;
 ; WaitFrame();
 ;
-L0242:	jsr     _WaitFrame
-;
-; PPU.scroll = (uint8_t)scroll & 0xFF;
-;
-	lda     _scroll
-	sta     $2005
-;
-; PPU.scroll = 0;
-;
-	lda     #$00
-	sta     $2005
-;
-; PPU.control = ((scroll & 0x1FF) >> 8) | PPUCTRL_INC_1_HORIZ | PPUCTRL_BPATTERN_0 | PPUCTRL_SPATTERN_1 | PPUCTRL_NMI_ON;
-;
-	lda     _scroll+1
-	and     #$01
-	ora     #$08
-	ora     #$80
-	sta     $2000
+L0231:	jsr     _WaitFrame
 ;
 ; if (InputPort1 & BUTTON_UP) {
 ;
 	lda     _InputPort1
 	and     #$08
-	beq     L028C
+	beq     L0270
 ;
 ; if (player.y > 0) {
 ;
 	lda     _player
-	beq     L028C
+	beq     L0270
 ;
 ; --player.y;
 ;
 	dec     _player
 ;
-; if(!(inputPort1Old & BUTTON_UP)) {
+; if(!(InputPort1Prev & BUTTON_UP)) {
 ;
-	lda     _inputPort1Old
+	lda     _InputPort1Prev
 	and     #$08
-	bne     L028C
+	bne     L0270
 ;
 ; APU.pulse[0].control = 0x0F;
 ;
@@ -919,15 +863,15 @@ L0242:	jsr     _WaitFrame
 ;
 ; if (InputPort1 & BUTTON_DOWN) {
 ;
-L028C:	lda     _InputPort1
+L0270:	lda     _InputPort1
 	and     #$04
-	beq     L028D
+	beq     L0271
 ;
 ; if (player.y < 255) {
 ;
 	lda     _player
 	cmp     #$FF
-	bcs     L028D
+	bcs     L0271
 ;
 ; ++player.y;
 ;
@@ -935,89 +879,89 @@ L028C:	lda     _InputPort1
 ;
 ; if (InputPort1 & BUTTON_LEFT) {
 ;
-L028D:	lda     _InputPort1
+L0271:	lda     _InputPort1
 	and     #$02
-	beq     L028E
+	beq     L0272
 ;
 ; if (player.x > 0) {
 ;
 	lda     _player+3
-	beq     L0272
+	beq     L0256
 ;
 ; --player.x;
 ;
 	dec     _player+3
 ;
-; if(scroll == 0x0) {
+; if(Scroll == 0x0) {
 ;
-L0272:	lda     _scroll
-	ora     _scroll+1
-	bne     L0275
+L0256:	lda     _Scroll
+	ora     _Scroll+1
+	bne     L0259
 ;
-; scroll = 0x1FF;
+; Scroll = 0x1FF;
 ;
 	ldx     #$01
 	lda     #$FF
-	sta     _scroll
-	stx     _scroll+1
+	sta     _Scroll
+	stx     _Scroll+1
 ;
 ; } else {
 ;
-	jmp     L028E
+	jmp     L0272
 ;
-; --scroll;
+; --Scroll;
 ;
-L0275:	lda     _scroll
+L0259:	lda     _Scroll
 	sec
 	sbc     #$01
-	sta     _scroll
-	bcs     L028E
-	dec     _scroll+1
+	sta     _Scroll
+	bcs     L0272
+	dec     _Scroll+1
 ;
 ; if (InputPort1 & BUTTON_RIGHT) {
 ;
-L028E:	lda     _InputPort1
+L0272:	lda     _InputPort1
 	and     #$01
-	beq     L028F
+	beq     L0273
 ;
 ; if (player.x < 255) {
 ;
 	lda     _player+3
 	cmp     #$FF
-	bcs     L027F
+	bcs     L0263
 ;
 ; ++player.x;
 ;
 	inc     _player+3
 ;
-; ++scroll;
+; ++Scroll;
 ;
-L027F:	inc     _scroll
-	bne     L0283
-	inc     _scroll+1
+L0263:	inc     _Scroll
+	bne     L0267
+	inc     _Scroll+1
 ;
-; if(scroll > 0x200) {
+; if(Scroll > 0x200) {
 ;
-L0283:	lda     _scroll
+L0267:	lda     _Scroll
 	cmp     #$01
-	lda     _scroll+1
+	lda     _Scroll+1
 	sbc     #$02
-	bcc     L028F
+	bcc     L0273
 ;
-; scroll = 0x00;
+; Scroll = 0x00;
 ;
 	lda     #$00
-	sta     _scroll
-	sta     _scroll+1
+	sta     _Scroll
+	sta     _Scroll+1
 ;
-; inputPort1Old = InputPort1;
+; VRAMUpdateReady = 1;
 ;
-L028F:	lda     _InputPort1
-	sta     _inputPort1Old
+L0273:	lda     #$01
+	sta     _VRAMUpdateReady
 ;
 ; while (1) {
 ;
-	jmp     L0242
+	jmp     L0231
 
 .endproc
 

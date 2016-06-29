@@ -60,7 +60,6 @@ extern uint8_t FrameCount;
 #pragma zpsym("FrameCount");
 
 extern uint8_t InputPort1;
-uint8_t inputPort1Old = 0;
 #pragma zpsym("InputPort1");
 
 extern uint8_t InputPort1Prev;
@@ -72,11 +71,17 @@ extern uint8_t InputPort2;
 extern uint8_t InputPort2Prev;
 #pragma zpsym("InputPort2Prev");
 
+extern uint8_t VRAMUpdateReady;
+#pragma zpsym("VRAMUpdateReady");
+
+extern uint16_t Scroll;
+#pragma zpsym("Scroll");
+
+void UpdateInput();
 void WaitFrame(void);
 
 #pragma bss-name(push, "ZEROPAGE")
 size_t i, x, y, mapX, mapY, tileIndex;
-uint16_t scroll = 0;
 uint16_t score = 5421;
 #pragma bss-name(pop)
 
@@ -110,20 +115,12 @@ const uint8_t map[] = { 0x00, 0x01, 0x02, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x
                         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-uint16_t a = 10000;
-
 void drawStatus() {
     PPU.vram.address = 0x20;
     PPU.vram.address = 0x40 + 0x04;    
 
     for(i = 0; i < sizeof(ScoreText); i++) {
         PPU.vram.data = ScoreText[i];
-    }
-
-    a = 10000;
-    PPU.vram.address = 0x20;
-    PPU.vram.address = 0x60 + 0x04;    
-    for(i = 0; i < 3; i++) {
     }
 }
 
@@ -170,6 +167,7 @@ void main(void) {
 
     drawStatus();
     drawBackground();
+    Scroll = 0;
 
     // init player sprite
     player.x = 20;
@@ -189,19 +187,19 @@ void main(void) {
 
     // infinite loop
     while (1) {
+        //UpdateInput();
         WaitFrame();
         
         // reset scroll
-        PPU.scroll = (uint8_t)scroll & 0xFF;
-        PPU.scroll = 0;
-
-        PPU.control = ((scroll & 0x1FF) >> 8) | PPUCTRL_INC_1_HORIZ | PPUCTRL_BPATTERN_0 | PPUCTRL_SPATTERN_1 | PPUCTRL_NMI_ON;
+        //PPU.scroll = (uint8_t)scroll & 0xFF;
+        //PPU.scroll = 0;
+        //PPU.control = ((scroll & 0x1FF) >> 8) | PPUCTRL_INC_1_HORIZ | PPUCTRL_BPATTERN_0 | PPUCTRL_SPATTERN_1 | PPUCTRL_NMI_ON;
 
         if (InputPort1 & BUTTON_UP) {
             if (player.y > 0) {
                 --player.y;
 
-                if(!(inputPort1Old & BUTTON_UP)) {
+                if(!(InputPort1Prev & BUTTON_UP)) {
                     APU.pulse[0].control = 0x0F;
                     APU.pulse[0].ramp = 0x01;
                     APU.pulse[0].period_low = 0x05;
@@ -221,10 +219,10 @@ void main(void) {
                 --player.x;
             }
 
-            if(scroll == 0x0) {
-                scroll = 0x1FF;
+            if(Scroll == 0x0) {
+                Scroll = 0x1FF;
             } else {
-                --scroll;
+                --Scroll;
             }
 
         }
@@ -234,12 +232,12 @@ void main(void) {
                 ++player.x;
             }
 
-            ++scroll;
-            if(scroll > 0x200) {
-                scroll = 0x00;
+            ++Scroll;
+            if(Scroll > 0x200) {
+                Scroll = 0x00;
             }
         }
 
-        inputPort1Old = InputPort1;
+        VRAMUpdateReady = 1;
     }   
 };

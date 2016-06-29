@@ -3,7 +3,7 @@
 .import _main
 .export __STARTUP__:absolute=1
 .export _WaitFrame
-.exportzp _FrameCount, _InputPort1, _InputPort1Prev, _InputPort2, _InputPort2Prev
+.exportzp _FrameCount, _InputPort1, _InputPort1Prev, _InputPort2, _InputPort2Prev, _VRAMUpdateReady, _Scroll
 
 ; linker-generated symbols
 
@@ -15,6 +15,7 @@
 PPU_CTRL      = $2000
 PPU_MASK      = $2001
 PPU_STATUS    = $2002
+PPU_SCROLL    = $2005
 OAM_ADDRESS   = $2003
 OAM_DMA       = $4014
 APU_DMC       = $4010
@@ -29,6 +30,8 @@ INPUT_2       = $4017
 ; Frame handling
 _FrameCount:       .res 1
 frame_done:        .res 1
+_VRAMUpdateReady:  .res 1
+_Scroll:           .res 2
 
 ; Input handling
 _InputPort1:       .res 1
@@ -213,11 +216,21 @@ nmi:
     tya
     pha
 
+    ; test VRAM ready flag
+    lda _VRAMUpdateReady
+    beq @finish
+
     ; start OAM DMA
     lda #0
     sta OAM_ADDRESS
     lda #>(__OAM_LOAD__)
     sta OAM_DMA
+
+
+@finish:
+    ; clear VRAM ready flag
+    lda #0
+    sta _VRAMUpdateReady    
 
     ; increment frame counter
     inc _FrameCount
@@ -225,6 +238,12 @@ nmi:
     ; release _WaitFrame
     lda #0
     sta frame_done
+
+    ; scrolling
+    lda _Scroll
+    sta PPU_SCROLL
+    lda #0
+    sta PPU_SCROLL
 
     ; restore registers and return
     pla
