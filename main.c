@@ -247,7 +247,7 @@ void main(void) {
             ++playerSpeedX;
         }
 
-        if(playerX < Scroll + 32 && Scroll > 0)
+        if(playerX < Scroll + 32 && Scroll > 0) {
             Scroll -= 2;
         }
 
@@ -260,10 +260,10 @@ void main(void) {
 
         // update player sprites
         relativePlayerX = playerX - Scroll;
-        playerSprites[0].x = relativePlayerX; playerSprites[0].y = playerY;
-        playerSprites[1].x = relativePlayerX + 8; playerSprites[1].y = playerY;
-        playerSprites[2].x = relativePlayerX; playerSprites[2].y = playerY + 8;
-        playerSprites[3].x = relativePlayerX + 8; playerSprites[3].y = playerY + 8;
+        playerSprites[0].x = relativePlayerX; playerSprites[0].y = playerY; playerSprites[0].tile_index = ((FrameCount >> 3) & 0x01) ? 0x00 : 0x02;
+        playerSprites[1].x = relativePlayerX + 8; playerSprites[1].y = playerY; playerSprites[1].tile_index = playerSprites[0].tile_index + 0x01;
+        playerSprites[2].x = relativePlayerX; playerSprites[2].y = playerY + 8; playerSprites[2].tile_index = playerSprites[0].tile_index + 0x10;
+        playerSprites[3].x = relativePlayerX + 8; playerSprites[3].y = playerY + 8; playerSprites[3].tile_index = playerSprites[0].tile_index + 0x11;
 
         // tells the NMI to update
         VRAMUpdateReady = 1;

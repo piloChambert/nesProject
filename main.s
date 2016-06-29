@@ -11,6 +11,7 @@
 	.importzp	tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
 	.macpack	longbranch
 	.forceimport	__STARTUP__
+	.importzp	_FrameCount
 	.importzp	_InputPort1
 	.importzp	_VRAMUpdateReady
 	.importzp	_SplitEnable
@@ -663,9 +664,9 @@ L01F9:	jcs     L01F3
 	ldx     #$00
 	and     #$27
 	asl     a
-	bcc     L02E1
+	bcc     L02FA
 	inx
-L02E1:	sta     _tileIndex
+L02FA:	sta     _tileIndex
 	stx     _tileIndex+1
 ;
 ; if((i >> 5) & 0x1) {
@@ -690,17 +691,17 @@ L02E1:	sta     _tileIndex
 ;
 L0207:	lda     _i
 	and     #$01
-	beq     L02E2
+	beq     L02FB
 ;
 ; ++tileIndex;
 ;
 	inc     _tileIndex
-	bne     L02E2
+	bne     L02FB
 	inc     _tileIndex+1
 ;
 ; PPU.vram.data = (uint8_t)tileIndex;
 ;
-L02E2:	lda     _tileIndex
+L02FB:	lda     _tileIndex
 	sta     $2007
 ;
 ; for(i = 0; i < 32 * 26; i++) {
@@ -941,13 +942,13 @@ L027C:	jsr     _WaitFrame
 ;
 	lda     _InputPort1
 	and     #$08
-	beq     L02E8
+	beq     L02FE
 ;
 ; if (playerY > 0) {
 ;
 	lda     _playerY
 	ora     _playerY+1
-	beq     L02E8
+	beq     L02FE
 ;
 ; --playerY;
 ;
@@ -955,14 +956,14 @@ L027C:	jsr     _WaitFrame
 	sec
 	sbc     #$01
 	sta     _playerY
-	bcs     L02E8
+	bcs     L02FE
 	dec     _playerY+1
 ;
 ; if(InputPort1 & BUTTON_DOWN) {
 ;
-L02E8:	lda     _InputPort1
+L02FE:	lda     _InputPort1
 	and     #$04
-	beq     L02E9
+	beq     L02FF
 ;
 ; if (playerY < 240) {
 ;
@@ -971,19 +972,19 @@ L02E8:	lda     _InputPort1
 	bne     L028C
 	lda     _playerY
 	cmp     #$F0
-L028C:	bcs     L02E9
+L028C:	bcs     L02FF
 ;
 ; ++playerY;
 ;
 	inc     _playerY
-	bne     L02E9
+	bne     L02FF
 	inc     _playerY+1
 ;
 ; if(InputPort1 & BUTTON_LEFT) {
 ;
-L02E9:	lda     _InputPort1
+L02FF:	lda     _InputPort1
 	and     #$02
-	beq     L02EA
+	beq     L0300
 ;
 ; if (playerSpeedX > -8) {
 ;
@@ -1002,9 +1003,9 @@ L0294:	bpl     L02AC
 ; } else if(InputPort1 & BUTTON_RIGHT) {
 ;
 	jmp     L02AC
-L02EA:	lda     _InputPort1
+L0300:	lda     _InputPort1
 	and     #$01
-	beq     L02EB
+	beq     L0301
 ;
 ; if (playerSpeedX < 8) {
 ;
@@ -1023,12 +1024,12 @@ L029D:	bpl     L02AC
 ; } else if(playerSpeedX > 0) {
 ;
 	jmp     L02AC
-L02EB:	lda     _playerSpeedX
+L0301:	lda     _playerSpeedX
 	sec
 	sbc     #$01
 	bvs     L02A4
 	eor     #$80
-L02A4:	bpl     L02EC
+L02A4:	bpl     L0302
 ;
 ; --playerSpeedX;
 ;
@@ -1038,7 +1039,7 @@ L02A4:	bpl     L02EC
 ; } else if(playerSpeedX < 0) {
 ;
 	jmp     L02AC
-L02EC:	lda     _playerSpeedX
+L0302:	lda     _playerSpeedX
 	asl     a
 	bcc     L02AC
 ;
@@ -1046,7 +1047,7 @@ L02EC:	lda     _playerSpeedX
 ;
 	inc     _playerSpeedX
 ;
-; if((playerX < Scroll + 32 && Scroll > 0) || (playerX > Scroll + 256 - 32 && Scroll < 256)) {
+; if(playerX < Scroll + 32 && Scroll > 0) {
 ;
 L02AC:	lda     _playerX
 	ldx     _playerX+1
@@ -1055,14 +1056,26 @@ L02AC:	lda     _playerX
 	ldx     _Scroll+1
 	clc
 	adc     #$20
-	bcc     L02B0
+	bcc     L02AF
 	inx
-L02B0:	jsr     tosicmp
-	bcs     L02E3
+L02AF:	jsr     tosicmp
+	bcs     L02AD
 	lda     _Scroll
 	ora     _Scroll+1
-	bne     L02F6
-L02E3:	lda     _playerX
+	beq     L02AD
+;
+; Scroll -= 2;
+;
+	lda     _Scroll
+	sec
+	sbc     #$02
+	sta     _Scroll
+	bcs     L02AD
+	dec     _Scroll+1
+;
+; if(playerX > Scroll + 256 - 32 && Scroll < 256) {
+;
+L02AD:	lda     _playerX
 	ldx     _playerX+1
 	jsr     pushax
 	lda     _Scroll
@@ -1070,38 +1083,33 @@ L02E3:	lda     _playerX
 	inx
 	sec
 	sbc     #$20
-	bcs     L02B5
+	bcs     L02B8
 	dex
-L02B5:	jsr     tosicmp
-	bcc     L02F5
-	beq     L02F5
+L02B8:	jsr     tosicmp
+	bcc     L02BD
+	beq     L02BD
 	ldx     _Scroll+1
 	cpx     #$01
-	bcs     L02F5
-L02F6:	ldx     #$00
+	bcs     L02BD
 ;
-; Scroll += playerSpeedX;
+; Scroll += 2;
 ;
-	lda     _playerSpeedX
-	cmp     #$80
-	bcc     L02E6
-	dex
+	lda     #$02
 	clc
-L02E6:	adc     _Scroll
+	adc     _Scroll
 	sta     _Scroll
-	txa
-	adc     _Scroll+1
-	sta     _Scroll+1
+	bcc     L02BD
+	inc     _Scroll+1
 ;
 ; playerX += playerSpeedX;
 ;
-L02F5:	ldx     #$00
+L02BD:	ldx     #$00
 	lda     _playerSpeedX
 	cmp     #$80
-	bcc     L02E7
+	bcc     L02FD
 	dex
 	clc
-L02E7:	adc     _playerX
+L02FD:	adc     _playerX
 	sta     _playerX
 	txa
 	adc     _playerX+1
@@ -1117,14 +1125,24 @@ L02E7:	adc     _playerX
 	sbc     _Scroll+1
 	sta     _relativePlayerX+1
 ;
-; playerSprites[0].x = relativePlayerX; playerSprites[0].y = playerY;
+; playerSprites[0].x = relativePlayerX; playerSprites[0].y = playerY; playerSprites[0].tile_index = ((FrameCount >> 3) & 0x01) ? 0x00 : 0x02;
 ;
 	lda     _relativePlayerX
 	sta     _playerSprites+3
 	lda     _playerY
 	sta     _playerSprites
+	lda     _FrameCount
+	lsr     a
+	lsr     a
+	lsr     a
+	and     #$01
+	beq     L0305
+	lda     #$00
+	jmp     L0306
+L0305:	lda     #$02
+L0306:	sta     _playerSprites+1
 ;
-; playerSprites[1].x = relativePlayerX + 8; playerSprites[1].y = playerY;
+; playerSprites[1].x = relativePlayerX + 8; playerSprites[1].y = playerY; playerSprites[1].tile_index = playerSprites[0].tile_index + 0x01;
 ;
 	lda     _relativePlayerX
 	clc
@@ -1132,8 +1150,12 @@ L02E7:	adc     _playerX
 	sta     _playerSprites+7
 	lda     _playerY
 	sta     _playerSprites+4
+	lda     _playerSprites+1
+	clc
+	adc     #$01
+	sta     _playerSprites+5
 ;
-; playerSprites[2].x = relativePlayerX; playerSprites[2].y = playerY + 8;
+; playerSprites[2].x = relativePlayerX; playerSprites[2].y = playerY + 8; playerSprites[2].tile_index = playerSprites[0].tile_index + 0x10;
 ;
 	lda     _relativePlayerX
 	sta     _playerSprites+11
@@ -1141,8 +1163,12 @@ L02E7:	adc     _playerX
 	clc
 	adc     #$08
 	sta     _playerSprites+8
+	lda     _playerSprites+1
+	clc
+	adc     #$10
+	sta     _playerSprites+9
 ;
-; playerSprites[3].x = relativePlayerX + 8; playerSprites[3].y = playerY + 8;
+; playerSprites[3].x = relativePlayerX + 8; playerSprites[3].y = playerY + 8; playerSprites[3].tile_index = playerSprites[0].tile_index + 0x11;
 ;
 	lda     _relativePlayerX
 	clc
@@ -1152,6 +1178,10 @@ L02E7:	adc     _playerX
 	clc
 	adc     #$08
 	sta     _playerSprites+12
+	lda     _playerSprites+1
+	clc
+	adc     #$11
+	sta     _playerSprites+13
 ;
 ; VRAMUpdateReady = 1;
 ;
