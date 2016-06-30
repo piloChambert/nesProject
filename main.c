@@ -178,7 +178,7 @@ void main(void) {
         PPU.vram.data = PALETTE[i];
     }
 
-    bankswitch(1);
+    bankswitch(0);
 
     drawStatus();
     drawBackground();
@@ -266,7 +266,7 @@ void main(void) {
 
         // update player sprites
         relativePlayerX = playerX - Scroll;
-        playerYOffset = (FrameCount & 0x07);
+        playerYOffset = 0;
         playerSprites[0].x = relativePlayerX; playerSprites[0].y = playerY + playerYOffset; playerSprites[0].tile_index = ((FrameCount >> 3) & 0x01) ? 0x00 : 0x02;
         playerSprites[1].x = relativePlayerX + 8; playerSprites[1].y = playerY + playerYOffset; playerSprites[1].tile_index = playerSprites[0].tile_index + 0x01;
         playerSprites[2].x = relativePlayerX; playerSprites[2].y = playerY + 8 + playerYOffset; playerSprites[2].tile_index = playerSprites[0].tile_index + 0x10;
