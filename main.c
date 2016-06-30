@@ -82,6 +82,7 @@ extern uint16_t Scroll;
 
 void UpdateInput();
 void WaitFrame(void);
+void __fastcall__ bankswitch(unsigned char bank);
 
 #pragma bss-name(push, "ZEROPAGE")
 size_t i, x, y, mapX, mapY, tileIndex;
@@ -176,6 +177,8 @@ void main(void) {
     for ( i = 0; i < sizeof(PALETTE); ++i ) {
         PPU.vram.data = PALETTE[i];
     }
+
+    bankswitch(1);
 
     drawStatus();
     drawBackground();

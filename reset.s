@@ -54,9 +54,9 @@ temp2:             .res 1
 
 .byte $4e, $45, $53, $1a ; "NES" followed by MS-DOS EOF
 .byte $01                ; size of PRG ROM in 16 KiB units
-.byte $01                ; size of CHR ROM in 8 KiB units
-.byte $01                ; vertical mirroring, mapper 000 (NROM)
-.byte $00                ; mapper 000 (NROM)
+.byte $04                ; size of CHR ROM in 8 KiB units
+.byte $31                ; vertical mirroring, mapper 003 (CNROM)
+.byte $00                ; mapper 003 (CNROM)
 .byte $00                ; size of PRG RAM in 8 KiB units
 .byte $00                ; NTSC
 .byte $00                ; unused
@@ -210,6 +210,17 @@ ReadInput:
 
     rts
 
+.export _bankswitch
+
+_bankswitch:
+
+   tax
+   sta bankBytes,x
+   rts
+
+bankBytes:
+  .byte $00,$01,$02,$03
+
 ; NMI handler
 ; Push OAM changes via DMA, increment frame counter, and release _WaitFrame
 nmi:
@@ -278,31 +289,31 @@ WaitScanline:
 
     ; scrolling
 Scroll:
-    lda _Scroll
-    sta PPU_SCROLL
-    lda #0
-    sta PPU_SCROLL
+    LDA _Scroll
+    STA PPU_SCROLL
+    LDA #0
+    STA PPU_SCROLL
 
-    lda _Scroll + 1
-    ora #$88
-    sta PPU_CTRL
+    LDA _Scroll + 1
+    ORA #$88
+    STA PPU_CTRL
 
     ;LDA #%00011111 ; gray the scrolled part of the screen
     ;STA PPU_MASK
 
     ; restore registers and return
-    pla
-    tay
-    pla
-    tax
-    pla
+    PLA
+    TAY
+    PLA
+    TAX
+    PLA
 
-    rti
+    RTI
 
 ; IRQ handler
 irq:
     ; do nothing
-    rti
+    RTI
 
 .segment "RODATA"
 
@@ -315,7 +326,9 @@ irq:
 .word start ;$fffc Reset
 .word irq   ;$fffe IRQ
 
-.segment "CHARS"
-
 ; include CHR ROM data
+.segment "CHARS"
 .incbin "sprites.chr"
+.incbin "chrrom1.chr"
+.incbin "chrrom2.chr"
+.incbin "chrrom3.chr"

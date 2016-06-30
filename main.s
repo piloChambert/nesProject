@@ -17,6 +17,7 @@
 	.importzp	_SplitEnable
 	.importzp	_Scroll
 	.import		_WaitFrame
+	.import		_bankswitch
 	.export		_i
 	.export		_x
 	.export		_y
@@ -668,9 +669,9 @@ L01FA:	jcs     L01F4
 	ldx     #$00
 	lda     (ptr1),y
 	asl     a
-	bcc     L0302
+	bcc     L0304
 	inx
-L0302:	sta     _tileIndex
+L0304:	sta     _tileIndex
 	stx     _tileIndex+1
 ;
 ; if((i >> 5) & 0x1) {
@@ -695,17 +696,17 @@ L0302:	sta     _tileIndex
 ;
 L0207:	lda     _i
 	and     #$01
-	beq     L0303
+	beq     L0305
 ;
 ; ++tileIndex;
 ;
 	inc     _tileIndex
-	bne     L0303
+	bne     L0305
 	inc     _tileIndex+1
 ;
 ; PPU.vram.data = (uint8_t)tileIndex;
 ;
-L0303:	lda     _tileIndex
+L0305:	lda     _tileIndex
 	sta     $2007
 ;
 ; for(i = 0; i < 32 * 26; i++) {
@@ -816,9 +817,14 @@ L0236:	bcs     L022F
 	inc     _i+1
 	jmp     L022E
 ;
+; bankswitch(1);
+;
+L022F:	lda     #$01
+	jsr     _bankswitch
+;
 ; drawStatus();
 ;
-L022F:	jsr     _drawStatus
+	jsr     _drawStatus
 ;
 ; drawBackground();
 ;
@@ -939,19 +945,19 @@ L022F:	jsr     _drawStatus
 ;
 ; WaitFrame();
 ;
-L027C:	jsr     _WaitFrame
+L027E:	jsr     _WaitFrame
 ;
 ; if(InputPort1 & BUTTON_UP) {
 ;
 	lda     _InputPort1
 	and     #$08
-	beq     L0306
+	beq     L0308
 ;
 ; if (playerY > 0) {
 ;
 	lda     _playerY
 	ora     _playerY+1
-	beq     L0306
+	beq     L0308
 ;
 ; --playerY;
 ;
@@ -959,92 +965,92 @@ L027C:	jsr     _WaitFrame
 	sec
 	sbc     #$01
 	sta     _playerY
-	bcs     L0306
+	bcs     L0308
 	dec     _playerY+1
 ;
 ; if(InputPort1 & BUTTON_DOWN) {
 ;
-L0306:	lda     _InputPort1
+L0308:	lda     _InputPort1
 	and     #$04
-	beq     L0307
+	beq     L0309
 ;
 ; if (playerY < 240) {
 ;
 	lda     _playerY+1
 	cmp     #$00
-	bne     L028C
+	bne     L028E
 	lda     _playerY
 	cmp     #$F0
-L028C:	bcs     L0307
+L028E:	bcs     L0309
 ;
 ; ++playerY;
 ;
 	inc     _playerY
-	bne     L0307
+	bne     L0309
 	inc     _playerY+1
 ;
 ; if(InputPort1 & BUTTON_LEFT) {
 ;
-L0307:	lda     _InputPort1
+L0309:	lda     _InputPort1
 	and     #$02
-	beq     L0308
+	beq     L030A
 ;
 ; if (playerSpeedX > -8) {
 ;
 	lda     _playerSpeedX
 	sec
 	sbc     #$F9
-	bvs     L0294
+	bvs     L0296
 	eor     #$80
-L0294:	bpl     L02AC
+L0296:	bpl     L02AE
 ;
 ; --playerSpeedX;
 ;
 	dec     _playerSpeedX
-	bpl     L02AC
+	bpl     L02AE
 ;
 ; } else if(InputPort1 & BUTTON_RIGHT) {
 ;
-	jmp     L02AC
-L0308:	lda     _InputPort1
+	jmp     L02AE
+L030A:	lda     _InputPort1
 	and     #$01
-	beq     L0309
+	beq     L030B
 ;
 ; if (playerSpeedX < 8) {
 ;
 	lda     _playerSpeedX
 	sec
 	sbc     #$08
-	bvc     L029D
+	bvc     L029F
 	eor     #$80
-L029D:	bpl     L02AC
+L029F:	bpl     L02AE
 ;
 ; ++playerSpeedX;
 ;
 	inc     _playerSpeedX
-	bpl     L02AC
+	bpl     L02AE
 ;
 ; } else if(playerSpeedX > 0) {
 ;
-	jmp     L02AC
-L0309:	lda     _playerSpeedX
+	jmp     L02AE
+L030B:	lda     _playerSpeedX
 	sec
 	sbc     #$01
-	bvs     L02A4
+	bvs     L02A6
 	eor     #$80
-L02A4:	bpl     L030A
+L02A6:	bpl     L030C
 ;
 ; --playerSpeedX;
 ;
 	dec     _playerSpeedX
-	bpl     L02AC
+	bpl     L02AE
 ;
 ; } else if(playerSpeedX < 0) {
 ;
-	jmp     L02AC
-L030A:	lda     _playerSpeedX
+	jmp     L02AE
+L030C:	lda     _playerSpeedX
 	asl     a
-	bcc     L02AC
+	bcc     L02AE
 ;
 ; ++playerSpeedX;
 ;
@@ -1052,20 +1058,20 @@ L030A:	lda     _playerSpeedX
 ;
 ; if(playerX < Scroll + 32 && Scroll > 0) {
 ;
-L02AC:	lda     _playerX
+L02AE:	lda     _playerX
 	ldx     _playerX+1
 	jsr     pushax
 	lda     _Scroll
 	ldx     _Scroll+1
 	clc
 	adc     #$20
-	bcc     L02AF
+	bcc     L02B1
 	inx
-L02AF:	jsr     tosicmp
-	bcs     L02AD
+L02B1:	jsr     tosicmp
+	bcs     L02AF
 	lda     _Scroll
 	ora     _Scroll+1
-	beq     L02AD
+	beq     L02AF
 ;
 ; Scroll -= 2;
 ;
@@ -1073,12 +1079,12 @@ L02AF:	jsr     tosicmp
 	sec
 	sbc     #$02
 	sta     _Scroll
-	bcs     L02AD
+	bcs     L02AF
 	dec     _Scroll+1
 ;
 ; if(playerX > Scroll + 256 - 32 && Scroll < 256) {
 ;
-L02AD:	lda     _playerX
+L02AF:	lda     _playerX
 	ldx     _playerX+1
 	jsr     pushax
 	lda     _Scroll
@@ -1086,14 +1092,14 @@ L02AD:	lda     _playerX
 	inx
 	sec
 	sbc     #$20
-	bcs     L02B8
+	bcs     L02BA
 	dex
-L02B8:	jsr     tosicmp
-	bcc     L02BD
-	beq     L02BD
+L02BA:	jsr     tosicmp
+	bcc     L02BF
+	beq     L02BF
 	ldx     _Scroll+1
 	cpx     #$01
-	bcs     L02BD
+	bcs     L02BF
 ;
 ; Scroll += 2;
 ;
@@ -1101,18 +1107,18 @@ L02B8:	jsr     tosicmp
 	clc
 	adc     _Scroll
 	sta     _Scroll
-	bcc     L02BD
+	bcc     L02BF
 	inc     _Scroll+1
 ;
 ; playerX += playerSpeedX;
 ;
-L02BD:	ldx     #$00
+L02BF:	ldx     #$00
 	lda     _playerSpeedX
 	cmp     #$80
-	bcc     L0305
+	bcc     L0307
 	dex
 	clc
-L0305:	adc     _playerX
+L0307:	adc     _playerX
 	sta     _playerX
 	txa
 	adc     _playerX+1
@@ -1141,9 +1147,9 @@ L0305:	adc     _playerX
 	sta     _playerSprites+3
 	ldx     #$00
 	lda     _playerYOffset
-	bpl     L02CE
+	bpl     L02D0
 	dex
-L02CE:	clc
+L02D0:	clc
 	adc     _playerY
 	sta     _playerSprites
 	txa
@@ -1153,11 +1159,11 @@ L02CE:	clc
 	lsr     a
 	lsr     a
 	and     #$01
-	beq     L030D
+	beq     L030F
 	lda     #$00
-	jmp     L030E
-L030D:	lda     #$02
-L030E:	sta     _playerSprites+1
+	jmp     L0310
+L030F:	lda     #$02
+L0310:	sta     _playerSprites+1
 ;
 ; playerSprites[1].x = relativePlayerX + 8; playerSprites[1].y = playerY + playerYOffset; playerSprites[1].tile_index = playerSprites[0].tile_index + 0x01;
 ;
@@ -1167,9 +1173,9 @@ L030E:	sta     _playerSprites+1
 	sta     _playerSprites+7
 	ldx     #$00
 	lda     _playerYOffset
-	bpl     L02DF
+	bpl     L02E1
 	dex
-L02DF:	clc
+L02E1:	clc
 	adc     _playerY
 	sta     _playerSprites+4
 	txa
@@ -1187,15 +1193,15 @@ L02DF:	clc
 	ldx     _playerY+1
 	clc
 	adc     #$08
-	bcc     L02EB
+	bcc     L02ED
 	inx
-L02EB:	sta     ptr1
+L02ED:	sta     ptr1
 	stx     ptr1+1
 	ldx     #$00
 	lda     _playerYOffset
-	bpl     L02EC
+	bpl     L02EE
 	dex
-L02EC:	clc
+L02EE:	clc
 	adc     ptr1
 	sta     _playerSprites+8
 	txa
@@ -1215,15 +1221,15 @@ L02EC:	clc
 	ldx     _playerY+1
 	clc
 	adc     #$08
-	bcc     L02F9
+	bcc     L02FB
 	inx
-L02F9:	sta     ptr1
+L02FB:	sta     ptr1
 	stx     ptr1+1
 	ldx     #$00
 	lda     _playerYOffset
-	bpl     L02FA
+	bpl     L02FC
 	dex
-L02FA:	clc
+L02FC:	clc
 	adc     ptr1
 	sta     _playerSprites+12
 	txa
@@ -1240,7 +1246,7 @@ L02FA:	clc
 ;
 ; while (1) {
 ;
-	jmp     L027C
+	jmp     L027E
 
 .endproc
 
