@@ -95,12 +95,11 @@ uint16_t score = 5421;
 #pragma bss-name(pop)
 
 #pragma bss-name(push, "OAM")
-sprite_t spriteZero;
-sprite_t playerSprites[4];
+sprite_t sprites[64];
 #pragma bss-name(pop)
 
 
-const char ScoreText[] = "Score.";
+const char ScoreText[] = "SCORE.";
 
 const uint8_t PALETTE[] = { 0x22, 0x00, 0x10, 0x20,
                             0x22, 0x11, 0x21, 0x31,
@@ -112,7 +111,7 @@ const uint8_t PALETTE[] = { 0x22, 0x00, 0x10, 0x20,
                             0x22, 0x19, 0x29, 0x39 };
 
 const uint8_t mapWidth = 32; // tiles count
-const uint8_t map[] = { 0x04, 0x01, 0x02, 0x03, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+const uint8_t map[] = { 0x00, 0x01, 0x02, 0x03, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                         0x01, 0x01, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04,
                         0x01, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04,
                         0x01, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04,
@@ -135,12 +134,13 @@ void drawStatus() {
     }
 }
 
-void drawBackground() {
-    PPU.vram.address = 0x20;
+void drawBackground(uint8_t table) {
+    // nametable 
+    PPU.vram.address = 0x20 + (table * 4);
     PPU.vram.address = 0xA0;
 
     for(i = 0; i < 32 * 26; i++) {
-        mapX = (i & 0x1F) >> 1;
+        mapX = ((i & 0x1F) >> 1) + (table << 4);
         mapY = (i >> 6);
 
         tileIndex = map[mapX + (mapY << 5)] << 1;
@@ -159,11 +159,45 @@ void drawBackground() {
     }
 
     // color
-    PPU.vram.address = 0x23;
+    PPU.vram.address = 0x23 + (table * 4);
     PPU.vram.address = 0xC0;
     for(i = 0; i < 64; i++) {
         PPU.vram.data = 0x00;
     }
+}
+
+const uint8_t playerSpriteFrames[2][17] = {
+    { // x, y, tile, attr
+        0, 0, 0x00, 0x00,
+        8, 0, 0x01, 0x00,
+        0, 8, 0x10, 0x00,
+        8, 8, 0x11, 0x00,
+        127
+    },
+    { // x, y, tile, attr
+        0, 0, 0x02, 0x00,
+        8, 0, 0x03, 0x00,
+        0, 8, 0x12, 0x00,
+        8, 8, 0x13, 0x00,
+        127
+    },
+
+};
+
+// return next id
+uint8_t drawMetaSprite(uint8_t id, uint8_t x, uint8_t y, const uint8_t *data) {
+    // copy data at pos
+    const uint8_t *ptr = data;
+    while(*ptr != 127) {
+        sprites[id].x = x + *(ptr++);
+        sprites[id].y = y + *(ptr++);
+        sprites[id].tile_index = *(ptr++);
+        sprites[id].attributes = *(ptr++);
+
+        id++;
+    }
+
+    return id;
 }
 
 /**
@@ -181,30 +215,14 @@ void main(void) {
     bankswitch(0);
 
     drawStatus();
-    drawBackground();
+    drawBackground(1);
+    drawBackground(0);
     Scroll = 0;
 
     // init sprite zero
-    spriteZero.x = 72;
-    spriteZero.y = 16;
-    spriteZero.tile_index = 0xFF;
-
-    // init player sprite
-    playerSprites[0].x = 0;
-    playerSprites[0].y = 0;
-    playerSprites[0].tile_index = 0x00;
-
-    playerSprites[1].x = 0;
-    playerSprites[1].y = 0;
-    playerSprites[1].tile_index = 0x01;
-
-    playerSprites[2].x = 0;
-    playerSprites[2].y = 0;
-    playerSprites[2].tile_index = 0x10;
-
-    playerSprites[3].x = 0;
-    playerSprites[3].y = 0;
-    playerSprites[3].tile_index = 0x11;
+    sprites[0].x = 72;
+    sprites[0].y = 16;
+    sprites[0].tile_index = 0xFF;
 
     playerX = 32;
 
@@ -247,16 +265,17 @@ void main(void) {
             if (playerSpeedX < 8) {
                 ++playerSpeedX;
             }
-        } else if(playerSpeedX > 0) {
-            --playerSpeedX;
-        } else if(playerSpeedX < 0) {
-            ++playerSpeedX;
+        } else if(playerSpeedX > 3) {
+            playerSpeedX -= 4;
+        } else if(playerSpeedX < -3) {
+            playerSpeedX += 4;
+        } else {
+            playerSpeedX = 0;
         }
 
         if(playerX < Scroll + 32 && Scroll > 0) {
             Scroll -= 2;
         }
-
 
         if(playerX > Scroll + 256 - 32 && Scroll < 256) {
             Scroll += 2;
@@ -266,11 +285,7 @@ void main(void) {
 
         // update player sprites
         relativePlayerX = playerX - Scroll;
-        playerYOffset = 0;
-        playerSprites[0].x = relativePlayerX; playerSprites[0].y = playerY + playerYOffset; playerSprites[0].tile_index = ((FrameCount >> 3) & 0x01) ? 0x00 : 0x02;
-        playerSprites[1].x = relativePlayerX + 8; playerSprites[1].y = playerY + playerYOffset; playerSprites[1].tile_index = playerSprites[0].tile_index + 0x01;
-        playerSprites[2].x = relativePlayerX; playerSprites[2].y = playerY + 8 + playerYOffset; playerSprites[2].tile_index = playerSprites[0].tile_index + 0x10;
-        playerSprites[3].x = relativePlayerX + 8; playerSprites[3].y = playerY + 8 + playerYOffset; playerSprites[3].tile_index = playerSprites[0].tile_index + 0x11;
+        drawMetaSprite(1, relativePlayerX, playerY, playerSpriteFrames[(FrameCount >> 2) & 0x01]);
 
         // tells the NMI to update
         VRAMUpdateReady = 1;
