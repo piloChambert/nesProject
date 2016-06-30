@@ -30,14 +30,15 @@
 	.export		_playerYOffset
 	.export		_relativePlayerX
 	.export		_score
-	.export		_spriteZero
-	.export		_playerSprites
+	.export		_sprites
 	.export		_ScoreText
 	.export		_PALETTE
 	.export		_mapWidth
 	.export		_map
 	.export		_drawStatus
 	.export		_drawBackground
+	.export		_playerSpriteFrames
+	.export		_drawMetaSprite
 	.export		_main
 
 .segment	"DATA"
@@ -56,7 +57,7 @@ _score:
 .segment	"RODATA"
 
 _ScoreText:
-	.byte	$53,$63,$6F,$72,$65,$2E,$00
+	.byte	$53,$43,$4F,$52,$45,$2E,$00
 _PALETTE:
 	.byte	$22
 	.byte	$00
@@ -93,7 +94,7 @@ _PALETTE:
 _mapWidth:
 	.byte	$20
 _map:
-	.byte	$04
+	.byte	$00
 	.byte	$01
 	.byte	$02
 	.byte	$03
@@ -509,6 +510,41 @@ _map:
 	.byte	$04
 	.byte	$04
 	.byte	$04
+_playerSpriteFrames:
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$08
+	.byte	$00
+	.byte	$01
+	.byte	$00
+	.byte	$00
+	.byte	$08
+	.byte	$10
+	.byte	$00
+	.byte	$08
+	.byte	$08
+	.byte	$11
+	.byte	$00
+	.byte	$7F
+	.byte	$00
+	.byte	$00
+	.byte	$02
+	.byte	$00
+	.byte	$08
+	.byte	$00
+	.byte	$03
+	.byte	$00
+	.byte	$00
+	.byte	$08
+	.byte	$12
+	.byte	$00
+	.byte	$08
+	.byte	$08
+	.byte	$13
+	.byte	$00
+	.byte	$7F
 
 .segment	"BSS"
 
@@ -529,10 +565,8 @@ _relativePlayerX:
 	.res	2,$00
 .segment	"BSS"
 .segment	"OAM"
-_spriteZero:
-	.res	4,$00
-_playerSprites:
-	.res	16,$00
+_sprites:
+	.res	256,$00
 .segment	"BSS"
 
 ; ---------------------------------------------------------------
@@ -599,7 +633,7 @@ L01DE:	rts
 .endproc
 
 ; ---------------------------------------------------------------
-; void __near__ drawBackground (void)
+; void __near__ drawBackground (unsigned char)
 ; ---------------------------------------------------------------
 
 .segment	"CODE"
@@ -609,9 +643,18 @@ L01DE:	rts
 .segment	"CODE"
 
 ;
-; PPU.vram.address = 0x20;
+; void drawBackground(uint8_t table) {
 ;
-	lda     #$20
+	jsr     pusha
+;
+; PPU.vram.address = 0x20 + (table * 4);
+;
+	ldy     #$00
+	lda     (sp),y
+	asl     a
+	asl     a
+	clc
+	adc     #$20
 	sta     $2006
 ;
 ; PPU.vram.address = 0xA0;
@@ -621,24 +664,32 @@ L01DE:	rts
 ;
 ; for(i = 0; i < 32 * 26; i++) {
 ;
-	lda     #$00
+	tya
 	sta     _i
 	sta     _i+1
-L01F3:	lda     _i+1
+L01F5:	lda     _i+1
 	cmp     #$03
-	bne     L01FA
+	bne     L01FC
 	lda     _i
 	cmp     #$40
-L01FA:	jcs     L01F4
+L01FC:	jcs     L01F6
 ;
-; mapX = (i & 0x1F) >> 1;
+; mapX = ((i & 0x1F) >> 1) + (table << 4);
 ;
 	lda     _i
 	ldx     #$00
 	and     #$1F
 	lsr     a
+	sta     ptr1
+	stx     ptr1+1
+	lda     (sp,x)
+	jsr     aslax4
+	clc
+	adc     ptr1
 	sta     _mapX
-	stx     _mapX+1
+	txa
+	adc     ptr1+1
+	sta     _mapX+1
 ;
 ; mapY = (i >> 6);
 ;
@@ -669,9 +720,9 @@ L01FA:	jcs     L01F4
 	ldx     #$00
 	lda     (ptr1),y
 	asl     a
-	bcc     L0302
+	bcc     L02FD
 	inx
-L0302:	sta     _tileIndex
+L02FD:	sta     _tileIndex
 	stx     _tileIndex+1
 ;
 ; if((i >> 5) & 0x1) {
@@ -681,7 +732,7 @@ L0302:	sta     _tileIndex
 	jsr     shrax4
 	jsr     shrax1
 	and     #$01
-	beq     L0207
+	beq     L020B
 ;
 ; tileIndex += 16;
 ;
@@ -689,24 +740,24 @@ L0302:	sta     _tileIndex
 	clc
 	adc     _tileIndex
 	sta     _tileIndex
-	bcc     L0207
+	bcc     L020B
 	inc     _tileIndex+1
 ;
 ; if(i & 0x1) {
 ;
-L0207:	lda     _i
+L020B:	lda     _i
 	and     #$01
-	beq     L0303
+	beq     L02FE
 ;
 ; ++tileIndex;
 ;
 	inc     _tileIndex
-	bne     L0303
+	bne     L02FE
 	inc     _tileIndex+1
 ;
 ; PPU.vram.data = (uint8_t)tileIndex;
 ;
-L0303:	lda     _tileIndex
+L02FE:	lda     _tileIndex
 	sta     $2007
 ;
 ; for(i = 0; i < 32 * 26; i++) {
@@ -715,15 +766,20 @@ L0303:	lda     _tileIndex
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L01FC
+	bcc     L01FE
 	inx
-L01FC:	sta     _i
+L01FE:	sta     _i
 	stx     _i+1
-	jmp     L01F3
+	jmp     L01F5
 ;
-; PPU.vram.address = 0x23;
+; PPU.vram.address = 0x23 + (table * 4);
 ;
-L01F4:	lda     #$23
+L01F6:	ldy     #$00
+	lda     (sp),y
+	asl     a
+	asl     a
+	clc
+	adc     #$23
 	sta     $2006
 ;
 ; PPU.vram.address = 0xC0;
@@ -733,15 +789,15 @@ L01F4:	lda     #$23
 ;
 ; for(i = 0; i < 64; i++) {
 ;
-	lda     #$00
+	tya
 	sta     _i
 	sta     _i+1
-L021A:	lda     _i+1
+L0220:	lda     _i+1
 	cmp     #$00
-	bne     L0221
+	bne     L0227
 	lda     _i
 	cmp     #$40
-L0221:	bcs     L021B
+L0227:	bcs     L0221
 ;
 ; PPU.vram.data = 0x00;
 ;
@@ -754,15 +810,202 @@ L0221:	bcs     L021B
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L0223
+	bcc     L0229
 	inx
-L0223:	sta     _i
+L0229:	sta     _i
 	stx     _i+1
-	jmp     L021A
+	jmp     L0220
 ;
 ; }
 ;
-L021B:	rts
+L0221:	jmp     incsp1
+
+.endproc
+
+; ---------------------------------------------------------------
+; unsigned char __near__ drawMetaSprite (unsigned char, unsigned char, unsigned char, __near__ const unsigned char *)
+; ---------------------------------------------------------------
+
+.segment	"CODE"
+
+.proc	_drawMetaSprite: near
+
+.segment	"CODE"
+
+;
+; uint8_t drawMetaSprite(uint8_t id, uint8_t x, uint8_t y, const uint8_t *data) {
+;
+	jsr     pushax
+;
+; const uint8_t *ptr = data;
+;
+	jsr     pushw0sp
+;
+; while(*ptr != 127) {
+;
+	jmp     L0255
+;
+; sprites[id].x = x + *(ptr++);
+;
+L0253:	ldy     #$06
+	ldx     #$00
+	lda     (sp),y
+	jsr     aslax2
+	clc
+	adc     #<(_sprites)
+	tay
+	txa
+	adc     #>(_sprites)
+	tax
+	tya
+	jsr     pushax
+	ldy     #$07
+	lda     (sp),y
+	jsr     pusha0
+	ldy     #$05
+	lda     (sp),y
+	tax
+	dey
+	lda     (sp),y
+	sta     regsave
+	stx     regsave+1
+	clc
+	adc     #$01
+	bcc     L025B
+	inx
+L025B:	jsr     staxysp
+	ldx     #$00
+	lda     (regsave,x)
+	jsr     tosadda0
+	ldy     #$03
+	jsr     staspidx
+;
+; sprites[id].y = y + *(ptr++);
+;
+	ldy     #$06
+	ldx     #$00
+	lda     (sp),y
+	jsr     aslax2
+	clc
+	adc     #<(_sprites)
+	tay
+	txa
+	adc     #>(_sprites)
+	tax
+	tya
+	jsr     pushax
+	ldy     #$06
+	lda     (sp),y
+	jsr     pusha0
+	ldy     #$05
+	lda     (sp),y
+	tax
+	dey
+	lda     (sp),y
+	sta     regsave
+	stx     regsave+1
+	clc
+	adc     #$01
+	bcc     L0260
+	inx
+L0260:	jsr     staxysp
+	ldx     #$00
+	lda     (regsave,x)
+	jsr     tosadda0
+	ldy     #$00
+	jsr     staspidx
+;
+; sprites[id].tile_index = *(ptr++);
+;
+	ldy     #$06
+	ldx     #$00
+	lda     (sp),y
+	jsr     aslax2
+	clc
+	adc     #<(_sprites)
+	tay
+	txa
+	adc     #>(_sprites)
+	tax
+	tya
+	jsr     pushax
+	ldy     #$03
+	lda     (sp),y
+	tax
+	dey
+	lda     (sp),y
+	sta     regsave
+	stx     regsave+1
+	clc
+	adc     #$01
+	bcc     L0265
+	inx
+L0265:	jsr     staxysp
+	ldy     #$00
+	lda     (regsave),y
+	iny
+	jsr     staspidx
+;
+; sprites[id].attributes = *(ptr++);
+;
+	ldy     #$06
+	ldx     #$00
+	lda     (sp),y
+	jsr     aslax2
+	clc
+	adc     #<(_sprites)
+	tay
+	txa
+	adc     #>(_sprites)
+	tax
+	tya
+	jsr     pushax
+	ldy     #$03
+	lda     (sp),y
+	tax
+	dey
+	lda     (sp),y
+	sta     regsave
+	stx     regsave+1
+	clc
+	adc     #$01
+	bcc     L026A
+	inx
+L026A:	jsr     staxysp
+	ldy     #$00
+	lda     (regsave),y
+	ldy     #$02
+	jsr     staspidx
+;
+; id++;
+;
+	ldy     #$06
+	lda     (sp),y
+	clc
+	adc     #$01
+	sta     (sp),y
+;
+; while(*ptr != 127) {
+;
+L0255:	ldy     #$01
+	lda     (sp),y
+	sta     ptr1+1
+	dey
+	lda     (sp),y
+	sta     ptr1
+	lda     (ptr1),y
+	cmp     #$7F
+	jne     L0253
+;
+; return id;
+;
+	ldy     #$06
+	ldx     #$00
+	lda     (sp),y
+;
+; }
+;
+	jmp     incsp7
 
 .endproc
 
@@ -791,12 +1034,12 @@ L021B:	rts
 ;
 	sta     _i
 	sta     _i+1
-L022E:	lda     _i+1
+L0274:	lda     _i+1
 	cmp     #$00
-	bne     L0236
+	bne     L027C
 	lda     _i
 	cmp     #$20
-L0236:	bcs     L022F
+L027C:	bcs     L0275
 ;
 ; PPU.vram.data = PALETTE[i];
 ;
@@ -813,21 +1056,27 @@ L0236:	bcs     L022F
 ; for ( i = 0; i < sizeof(PALETTE); ++i ) {
 ;
 	inc     _i
-	bne     L022E
+	bne     L0274
 	inc     _i+1
-	jmp     L022E
+	jmp     L0274
 ;
 ; bankswitch(0);
 ;
-L022F:	lda     #$00
+L0275:	lda     #$00
 	jsr     _bankswitch
 ;
 ; drawStatus();
 ;
 	jsr     _drawStatus
 ;
-; drawBackground();
+; drawBackground(1);
 ;
+	lda     #$01
+	jsr     _drawBackground
+;
+; drawBackground(0);
+;
+	lda     #$00
 	jsr     _drawBackground
 ;
 ; Scroll = 0;
@@ -837,74 +1086,20 @@ L022F:	lda     #$00
 	sta     _Scroll
 	sta     _Scroll+1
 ;
-; spriteZero.x = 72;
+; sprites[0].x = 72;
 ;
 	lda     #$48
-	sta     _spriteZero+3
+	sta     _sprites+3
 ;
-; spriteZero.y = 16;
+; sprites[0].y = 16;
 ;
 	lda     #$10
-	sta     _spriteZero
+	sta     _sprites
 ;
-; spriteZero.tile_index = 0xFF;
+; sprites[0].tile_index = 0xFF;
 ;
 	lda     #$FF
-	sta     _spriteZero+1
-;
-; playerSprites[0].x = 0;
-;
-	txa
-	sta     _playerSprites+3
-;
-; playerSprites[0].y = 0;
-;
-	sta     _playerSprites
-;
-; playerSprites[0].tile_index = 0x00;
-;
-	sta     _playerSprites+1
-;
-; playerSprites[1].x = 0;
-;
-	sta     _playerSprites+7
-;
-; playerSprites[1].y = 0;
-;
-	sta     _playerSprites+4
-;
-; playerSprites[1].tile_index = 0x01;
-;
-	lda     #$01
-	sta     _playerSprites+5
-;
-; playerSprites[2].x = 0;
-;
-	txa
-	sta     _playerSprites+11
-;
-; playerSprites[2].y = 0;
-;
-	sta     _playerSprites+8
-;
-; playerSprites[2].tile_index = 0x10;
-;
-	lda     #$10
-	sta     _playerSprites+9
-;
-; playerSprites[3].x = 0;
-;
-	txa
-	sta     _playerSprites+15
-;
-; playerSprites[3].y = 0;
-;
-	sta     _playerSprites+12
-;
-; playerSprites[3].tile_index = 0x11;
-;
-	lda     #$11
-	sta     _playerSprites+13
+	sta     _sprites+1
 ;
 ; playerX = 32;
 ;
@@ -945,19 +1140,19 @@ L022F:	lda     #$00
 ;
 ; WaitFrame();
 ;
-L027E:	jsr     _WaitFrame
+L02A6:	jsr     _WaitFrame
 ;
 ; if(InputPort1 & BUTTON_UP) {
 ;
 	lda     _InputPort1
 	and     #$08
-	beq     L0306
+	beq     L0300
 ;
 ; if (playerY > 0) {
 ;
 	lda     _playerY
 	ora     _playerY+1
-	beq     L0306
+	beq     L0300
 ;
 ; --playerY;
 ;
@@ -965,113 +1160,133 @@ L027E:	jsr     _WaitFrame
 	sec
 	sbc     #$01
 	sta     _playerY
-	bcs     L0306
+	bcs     L0300
 	dec     _playerY+1
 ;
 ; if(InputPort1 & BUTTON_DOWN) {
 ;
-L0306:	lda     _InputPort1
+L0300:	lda     _InputPort1
 	and     #$04
-	beq     L0307
+	beq     L0301
 ;
 ; if (playerY < 240) {
 ;
 	lda     _playerY+1
 	cmp     #$00
-	bne     L028E
+	bne     L02B6
 	lda     _playerY
 	cmp     #$F0
-L028E:	bcs     L0307
+L02B6:	bcs     L0301
 ;
 ; ++playerY;
 ;
 	inc     _playerY
-	bne     L0307
+	bne     L0301
 	inc     _playerY+1
 ;
 ; if(InputPort1 & BUTTON_LEFT) {
 ;
-L0307:	lda     _InputPort1
+L0301:	lda     _InputPort1
 	and     #$02
-	beq     L0308
+	beq     L0302
 ;
 ; if (playerSpeedX > -8) {
 ;
 	lda     _playerSpeedX
 	sec
 	sbc     #$F9
-	bvs     L0296
+	bvs     L02BE
 	eor     #$80
-L0296:	bpl     L02AE
+L02BE:	bpl     L02DA
 ;
 ; --playerSpeedX;
 ;
 	dec     _playerSpeedX
-	bpl     L02AE
+	bpl     L02DA
 ;
 ; } else if(InputPort1 & BUTTON_RIGHT) {
 ;
-	jmp     L02AE
-L0308:	lda     _InputPort1
+	jmp     L02DA
+L0302:	lda     _InputPort1
 	and     #$01
-	beq     L0309
+	beq     L0303
 ;
 ; if (playerSpeedX < 8) {
 ;
 	lda     _playerSpeedX
 	sec
 	sbc     #$08
-	bvc     L029F
+	bvc     L02C7
 	eor     #$80
-L029F:	bpl     L02AE
+L02C7:	bpl     L02DA
 ;
 ; ++playerSpeedX;
 ;
 	inc     _playerSpeedX
-	bpl     L02AE
+	bpl     L02DA
 ;
-; } else if(playerSpeedX > 0) {
+; } else if(playerSpeedX > 3) {
 ;
-	jmp     L02AE
-L0309:	lda     _playerSpeedX
+	jmp     L02DA
+L0303:	lda     _playerSpeedX
 	sec
-	sbc     #$01
-	bvs     L02A6
+	sbc     #$04
+	bvs     L02CE
 	eor     #$80
-L02A6:	bpl     L030A
+L02CE:	bpl     L0304
 ;
-; --playerSpeedX;
+; playerSpeedX -= 4;
 ;
-	dec     _playerSpeedX
-	bpl     L02AE
+	lda     _playerSpeedX
+	sec
+	sbc     #$04
+	sta     _playerSpeedX
+	bpl     L02DA
 ;
-; } else if(playerSpeedX < 0) {
+; } else if(playerSpeedX < -3) {
 ;
-	jmp     L02AE
-L030A:	lda     _playerSpeedX
-	asl     a
-	bcc     L02AE
+	jmp     L02DA
+L0304:	lda     _playerSpeedX
+	sec
+	sbc     #$FD
+	bvc     L02D6
+	eor     #$80
+L02D6:	asl     a
+	lda     #$00
+	bcc     L0306
 ;
-; ++playerSpeedX;
+; playerSpeedX += 4;
 ;
-	inc     _playerSpeedX
+	lda     #$04
+	clc
+	adc     _playerSpeedX
+	sta     _playerSpeedX
+	bpl     L02DA
+;
+; } else {
+;
+	jmp     L02DA
+;
+; playerSpeedX = 0;
+;
+L0306:	sta     _playerSpeedX
 ;
 ; if(playerX < Scroll + 32 && Scroll > 0) {
 ;
-L02AE:	lda     _playerX
+L02DA:	lda     _playerX
 	ldx     _playerX+1
 	jsr     pushax
 	lda     _Scroll
 	ldx     _Scroll+1
 	clc
 	adc     #$20
-	bcc     L02B1
+	bcc     L02DF
 	inx
-L02B1:	jsr     tosicmp
-	bcs     L02AF
+L02DF:	jsr     tosicmp
+	bcs     L02DD
 	lda     _Scroll
 	ora     _Scroll+1
-	beq     L02AF
+	beq     L02DD
 ;
 ; Scroll -= 2;
 ;
@@ -1079,12 +1294,12 @@ L02B1:	jsr     tosicmp
 	sec
 	sbc     #$02
 	sta     _Scroll
-	bcs     L02AF
+	bcs     L02DD
 	dec     _Scroll+1
 ;
 ; if(playerX > Scroll + 256 - 32 && Scroll < 256) {
 ;
-L02AF:	lda     _playerX
+L02DD:	lda     _playerX
 	ldx     _playerX+1
 	jsr     pushax
 	lda     _Scroll
@@ -1092,14 +1307,14 @@ L02AF:	lda     _playerX
 	inx
 	sec
 	sbc     #$20
-	bcs     L02BA
+	bcs     L02E8
 	dex
-L02BA:	jsr     tosicmp
-	bcc     L02BF
-	beq     L02BF
+L02E8:	jsr     tosicmp
+	bcc     L02ED
+	beq     L02ED
 	ldx     _Scroll+1
 	cpx     #$01
-	bcs     L02BF
+	bcs     L02ED
 ;
 ; Scroll += 2;
 ;
@@ -1107,18 +1322,18 @@ L02BA:	jsr     tosicmp
 	clc
 	adc     _Scroll
 	sta     _Scroll
-	bcc     L02BF
+	bcc     L02ED
 	inc     _Scroll+1
 ;
 ; playerX += playerSpeedX;
 ;
-L02BF:	ldx     #$00
+L02ED:	ldx     #$00
 	lda     _playerSpeedX
 	cmp     #$80
-	bcc     L0305
+	bcc     L02FF
 	dex
 	clc
-L0305:	adc     _playerX
+L02FF:	adc     _playerX
 	sta     _playerX
 	txa
 	adc     _playerX+1
@@ -1134,108 +1349,33 @@ L0305:	adc     _playerX
 	sbc     _Scroll+1
 	sta     _relativePlayerX+1
 ;
-; playerYOffset = 0;
+; drawMetaSprite(1, relativePlayerX, playerY, playerSpriteFrames[(FrameCount >> 2) & 0x01]);
 ;
-	lda     #$00
-	sta     _playerYOffset
-;
-; playerSprites[0].x = relativePlayerX; playerSprites[0].y = playerY + playerYOffset; playerSprites[0].tile_index = ((FrameCount >> 3) & 0x01) ? 0x00 : 0x02;
-;
+	jsr     decsp3
+	lda     #$01
+	ldy     #$02
+	sta     (sp),y
 	lda     _relativePlayerX
-	sta     _playerSprites+3
-	ldx     #$00
-	lda     _playerYOffset
-	bpl     L02CE
-	dex
-L02CE:	clc
-	adc     _playerY
-	sta     _playerSprites
-	txa
-	adc     _playerY+1
+	dey
+	sta     (sp),y
+	lda     _playerY
+	dey
+	sta     (sp),y
 	lda     _FrameCount
 	lsr     a
 	lsr     a
-	lsr     a
 	and     #$01
-	beq     L030D
-	lda     #$00
-	jmp     L030E
-L030D:	lda     #$02
-L030E:	sta     _playerSprites+1
-;
-; playerSprites[1].x = relativePlayerX + 8; playerSprites[1].y = playerY + playerYOffset; playerSprites[1].tile_index = playerSprites[0].tile_index + 0x01;
-;
-	lda     _relativePlayerX
+	jsr     pusha0
+	lda     #$11
+	jsr     tosmula0
 	clc
-	adc     #$08
-	sta     _playerSprites+7
-	ldx     #$00
-	lda     _playerYOffset
-	bpl     L02DF
-	dex
-L02DF:	clc
-	adc     _playerY
-	sta     _playerSprites+4
+	adc     #<(_playerSpriteFrames)
+	tay
 	txa
-	adc     _playerY+1
-	lda     _playerSprites+1
-	clc
-	adc     #$01
-	sta     _playerSprites+5
-;
-; playerSprites[2].x = relativePlayerX; playerSprites[2].y = playerY + 8 + playerYOffset; playerSprites[2].tile_index = playerSprites[0].tile_index + 0x10;
-;
-	lda     _relativePlayerX
-	sta     _playerSprites+11
-	lda     _playerY
-	ldx     _playerY+1
-	clc
-	adc     #$08
-	bcc     L02EB
-	inx
-L02EB:	sta     ptr1
-	stx     ptr1+1
-	ldx     #$00
-	lda     _playerYOffset
-	bpl     L02EC
-	dex
-L02EC:	clc
-	adc     ptr1
-	sta     _playerSprites+8
-	txa
-	adc     ptr1+1
-	lda     _playerSprites+1
-	clc
-	adc     #$10
-	sta     _playerSprites+9
-;
-; playerSprites[3].x = relativePlayerX + 8; playerSprites[3].y = playerY + 8 + playerYOffset; playerSprites[3].tile_index = playerSprites[0].tile_index + 0x11;
-;
-	lda     _relativePlayerX
-	clc
-	adc     #$08
-	sta     _playerSprites+15
-	lda     _playerY
-	ldx     _playerY+1
-	clc
-	adc     #$08
-	bcc     L02F9
-	inx
-L02F9:	sta     ptr1
-	stx     ptr1+1
-	ldx     #$00
-	lda     _playerYOffset
-	bpl     L02FA
-	dex
-L02FA:	clc
-	adc     ptr1
-	sta     _playerSprites+12
-	txa
-	adc     ptr1+1
-	lda     _playerSprites+1
-	clc
-	adc     #$11
-	sta     _playerSprites+13
+	adc     #>(_playerSpriteFrames)
+	tax
+	tya
+	jsr     _drawMetaSprite
 ;
 ; VRAMUpdateReady = 1;
 ;
@@ -1244,7 +1384,7 @@ L02FA:	clc
 ;
 ; while (1) {
 ;
-	jmp     L027E
+	jmp     L02A6
 
 .endproc
 
