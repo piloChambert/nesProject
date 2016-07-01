@@ -3,7 +3,7 @@
 .import _main
 .export __STARTUP__:absolute=1
 .export _WaitFrame
-.exportzp _FrameCount, _InputPort1, _InputPort1Prev, _InputPort2, _InputPort2Prev, _VRAMUpdateReady, _Scroll
+.exportzp _FrameCount, _InputPort1, _InputPort1Prev, _InputPort2, _InputPort2Prev, _VRAMUpdateReady, _SplitEnable, _Scroll
 
 ; linker-generated symbols
 
@@ -34,6 +34,7 @@ INPUT_2       = $4017
 _FrameCount:       .res 1
 frame_done:        .res 1
 _VRAMUpdateReady:  .res 1
+_SplitEnable:      .res 1 ; enable or disable split scroll
 _Scroll:           .res 2
 
 ; Input handling
@@ -54,7 +55,7 @@ temp2:             .res 1
 .byte $4e, $45, $53, $1a ; "NES" followed by MS-DOS EOF
 .byte $01                ; size of PRG ROM in 16 KiB units
 .byte $04                ; size of CHR ROM in 8 KiB units
-.byte $30                ; vertical mirroring, mapper 003 (CNROM)
+.byte $31                ; vertical mirroring, mapper 003 (CNROM)
 .byte $00                ; mapper 003 (CNROM)
 .byte $00                ; size of PRG RAM in 8 KiB units
 .byte $00                ; NTSC
@@ -268,18 +269,32 @@ nmi:
     LDA #%00011110 ; 
     STA PPU_MASK
 
-    ; scrolling
-    LDA #0
-    STA PPU_ADDR
-    STA PPU_ADDR
+    ; Sprite 0 hit detection for split scroll
+    LDA _SplitEnable
+    BEQ Scroll
+Sprite0:
+    LDA $2002
+    AND #$40
+    BNE Sprite0
+Sprite0b:
+    LDA $2002
+    AND #$40
+    BEQ Sprite0b
 
-    LDX #0
+    ; wait
+    LDX #$FF
+WaitScanline:
+    DEX
+    BNE WaitScanline
+
+    ; scrolling
+Scroll:
+    LDA _Scroll
     STA PPU_SCROLL
-    LDA <_Scroll
+    LDA #0
     STA PPU_SCROLL
 
     LDA _Scroll + 1 ; load scroll high byte
-    ASL A
     ORA #$88
     STA PPU_CTRL
 

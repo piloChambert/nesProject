@@ -11,10 +11,10 @@
 	.importzp	tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
 	.macpack	longbranch
 	.forceimport	__STARTUP__
+	.export		_entities
 	.importzp	_FrameCount
 	.importzp	_InputPort1
 	.importzp	_VRAMUpdateReady
-	.importzp	_SplitEnable
 	.importzp	_Scroll
 	.import		_WaitFrame
 	.import		_bankswitch
@@ -24,40 +24,21 @@
 	.export		_mapX
 	.export		_mapY
 	.export		_tileIndex
-	.export		_playerX
-	.export		_playerY
-	.export		_playerSpeedX
-	.export		_playerYOffset
-	.export		_relativePlayerX
-	.export		_score
+	.export		_tile
+	.export		_tileIdx
 	.export		_sprites
-	.export		_ScoreText
 	.export		_PALETTE
 	.export		_mapWidth
 	.export		_map
-	.export		_drawStatus
-	.export		_drawBackground
+	.export		_copyBgLine
+	.export		_fillBackground
 	.export		_playerSpriteFrames
 	.export		_drawMetaSprite
+	.export		_playerUpdate
 	.export		_main
-
-.segment	"DATA"
-
-_playerX:
-	.word	$0000
-_playerY:
-	.word	$0000
-_playerSpeedX:
-	.byte	$00
-_playerYOffset:
-	.byte	$00
-_score:
-	.word	$152D
 
 .segment	"RODATA"
 
-_ScoreText:
-	.byte	$53,$43,$4F,$52,$45,$2E,$00
 _PALETTE:
 	.byte	$22
 	.byte	$00
@@ -94,422 +75,678 @@ _PALETTE:
 _mapWidth:
 	.byte	$20
 _map:
-	.byte	$00
 	.byte	$01
-	.byte	$02
 	.byte	$03
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$03
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$03
+	.byte	$05
+	.byte	$05
 	.byte	$01
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
 	.byte	$01
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
-	.byte	$00
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$03
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
 	.byte	$01
-	.byte	$01
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$01
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$01
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$01
-	.byte	$01
-	.byte	$04
-	.byte	$01
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$01
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$01
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$01
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$01
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$01
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$01
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
-	.byte	$04
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$03
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$03
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$03
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$03
+	.byte	$05
+	.byte	$05
+	.byte	$03
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$03
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$03
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$03
+	.byte	$05
+	.byte	$03
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$03
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$03
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$03
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$03
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
+	.byte	$05
 _playerSpriteFrames:
 	.byte	$00
 	.byte	$00
@@ -548,6 +785,8 @@ _playerSpriteFrames:
 
 .segment	"BSS"
 
+_entities:
+	.res	72,$00
 .segment	"ZEROPAGE"
 _i:
 	.res	2,$00
@@ -561,8 +800,10 @@ _mapY:
 	.res	2,$00
 _tileIndex:
 	.res	2,$00
-_relativePlayerX:
-	.res	2,$00
+_tile:
+	.res	1,$00
+_tileIdx:
+	.res	1,$00
 .segment	"BSS"
 .segment	"OAM"
 _sprites:
@@ -570,12 +811,98 @@ _sprites:
 .segment	"BSS"
 
 ; ---------------------------------------------------------------
-; void __near__ drawStatus (void)
+; void __near__ copyBgLine (unsigned char)
 ; ---------------------------------------------------------------
 
 .segment	"CODE"
 
-.proc	_drawStatus: near
+.proc	_copyBgLine: near
+
+.segment	"CODE"
+
+;
+; void copyBgLine(uint8_t line) {
+;
+	jsr     pusha
+;
+; for(tile = 0; tile < 64; tile++) {
+;
+	lda     #$00
+L0416:	sta     _tile
+	cmp     #$40
+	bcs     L02D2
+;
+; tileIdx = map[line * 16 + ((tile & 0x1F) >> 1)] << 1;
+;
+	ldx     #$00
+	lda     (sp,x)
+	jsr     shlax4
+	sta     ptr1
+	stx     ptr1+1
+	lda     _tile
+	and     #$1F
+	lsr     a
+	clc
+	adc     ptr1
+	sta     ptr1
+	lda     #$00
+	adc     ptr1+1
+	clc
+	adc     #>(_map)
+	sta     ptr1+1
+	ldy     #<(_map)
+	lda     (ptr1),y
+	asl     a
+	sta     _tileIdx
+;
+; if(tile & 0x1) {
+;
+	lda     _tile
+	and     #$01
+	beq     L0414
+;
+; ++tileIdx;
+;
+	inc     _tileIdx
+;
+; if(tile >= 32) {
+;
+L0414:	lda     _tile
+	cmp     #$20
+	bcc     L0415
+;
+; tileIdx += 0x10;
+;
+	lda     #$10
+	clc
+	adc     _tileIdx
+	sta     _tileIdx
+;
+; PPU.vram.data = tileIdx;
+;
+L0415:	lda     _tileIdx
+	sta     $2007
+;
+; for(tile = 0; tile < 64; tile++) {
+;
+	lda     _tile
+	clc
+	adc     #$01
+	jmp     L0416
+;
+; }
+;
+L02D2:	jmp     incsp1
+
+.endproc
+
+; ---------------------------------------------------------------
+; void __near__ fillBackground (void)
+; ---------------------------------------------------------------
+
+.segment	"CODE"
+
+.proc	_fillBackground: near
 
 .segment	"CODE"
 
@@ -585,201 +912,42 @@ _sprites:
 	lda     #$20
 	sta     $2006
 ;
-; PPU.vram.address = 0x40 + 0x04;    
-;
-	lda     #$44
-	sta     $2006
-;
-; for(i = 0; i < sizeof(ScoreText); i++) {
+; PPU.vram.address = 0x00;
 ;
 	lda     #$00
+	sta     $2006
+;
+; for(i = 0; i < 15; i++) {
+;
 	sta     _i
 	sta     _i+1
-L01DD:	lda     _i+1
+L02EF:	lda     _i+1
 	cmp     #$00
-	bne     L01E5
+	bne     L02F6
 	lda     _i
-	cmp     #$07
-L01E5:	bcs     L01DE
+	cmp     #$0F
+L02F6:	bcs     L02F0
 ;
-; PPU.vram.data = ScoreText[i];
+; copyBgLine(i);
 ;
-	lda     #<(_ScoreText)
-	sta     ptr1
-	lda     #>(_ScoreText)
-	clc
-	adc     _i+1
-	sta     ptr1+1
-	ldy     _i
-	lda     (ptr1),y
-	sta     $2007
+	lda     _i
+	jsr     _copyBgLine
 ;
-; for(i = 0; i < sizeof(ScoreText); i++) {
+; for(i = 0; i < 15; i++) {
 ;
 	lda     _i
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L01E7
+	bcc     L02F8
 	inx
-L01E7:	sta     _i
+L02F8:	sta     _i
 	stx     _i+1
-	jmp     L01DD
+	jmp     L02EF
 ;
-; }
+; PPU.vram.address = 0x23;
 ;
-L01DE:	rts
-
-.endproc
-
-; ---------------------------------------------------------------
-; void __near__ drawBackground (unsigned char)
-; ---------------------------------------------------------------
-
-.segment	"CODE"
-
-.proc	_drawBackground: near
-
-.segment	"CODE"
-
-;
-; void drawBackground(uint8_t table) {
-;
-	jsr     pusha
-;
-; PPU.vram.address = 0x20 + (table * 4);
-;
-	ldy     #$00
-	lda     (sp),y
-	asl     a
-	asl     a
-	clc
-	adc     #$20
-	sta     $2006
-;
-; PPU.vram.address = 0xA0;
-;
-	lda     #$A0
-	sta     $2006
-;
-; for(i = 0; i < 32 * 26; i++) {
-;
-	tya
-	sta     _i
-	sta     _i+1
-L01F5:	lda     _i+1
-	cmp     #$03
-	bne     L01FC
-	lda     _i
-	cmp     #$40
-L01FC:	jcs     L01F6
-;
-; mapX = ((i & 0x1F) >> 1) + (table << 4);
-;
-	lda     _i
-	ldx     #$00
-	and     #$1F
-	lsr     a
-	sta     ptr1
-	stx     ptr1+1
-	lda     (sp,x)
-	jsr     aslax4
-	clc
-	adc     ptr1
-	sta     _mapX
-	txa
-	adc     ptr1+1
-	sta     _mapX+1
-;
-; mapY = (i >> 6);
-;
-	lda     _i
-	ldx     _i+1
-	jsr     shrax4
-	jsr     shrax2
-	sta     _mapY
-	stx     _mapY+1
-;
-; tileIndex = map[mapX + (mapY << 5)] << 1;
-;
-	lda     _mapY
-	ldx     _mapY+1
-	jsr     shlax4
-	stx     tmp1
-	asl     a
-	rol     tmp1
-	clc
-	adc     _mapX
-	sta     ptr1
-	lda     tmp1
-	adc     _mapX+1
-	clc
-	adc     #>(_map)
-	sta     ptr1+1
-	ldy     #<(_map)
-	ldx     #$00
-	lda     (ptr1),y
-	asl     a
-	bcc     L02FD
-	inx
-L02FD:	sta     _tileIndex
-	stx     _tileIndex+1
-;
-; if((i >> 5) & 0x1) {
-;
-	lda     _i
-	ldx     _i+1
-	jsr     shrax4
-	jsr     shrax1
-	and     #$01
-	beq     L020B
-;
-; tileIndex += 16;
-;
-	lda     #$10
-	clc
-	adc     _tileIndex
-	sta     _tileIndex
-	bcc     L020B
-	inc     _tileIndex+1
-;
-; if(i & 0x1) {
-;
-L020B:	lda     _i
-	and     #$01
-	beq     L02FE
-;
-; ++tileIndex;
-;
-	inc     _tileIndex
-	bne     L02FE
-	inc     _tileIndex+1
-;
-; PPU.vram.data = (uint8_t)tileIndex;
-;
-L02FE:	lda     _tileIndex
-	sta     $2007
-;
-; for(i = 0; i < 32 * 26; i++) {
-;
-	lda     _i
-	ldx     _i+1
-	clc
-	adc     #$01
-	bcc     L01FE
-	inx
-L01FE:	sta     _i
-	stx     _i+1
-	jmp     L01F5
-;
-; PPU.vram.address = 0x23 + (table * 4);
-;
-L01F6:	ldy     #$00
-	lda     (sp),y
-	asl     a
-	asl     a
-	clc
-	adc     #$23
+L02F0:	lda     #$23
 	sta     $2006
 ;
 ; PPU.vram.address = 0xC0;
@@ -789,19 +957,19 @@ L01F6:	ldy     #$00
 ;
 ; for(i = 0; i < 64; i++) {
 ;
-	tya
+	lda     #$00
 	sta     _i
 	sta     _i+1
-L0220:	lda     _i+1
+L0301:	lda     _i+1
 	cmp     #$00
-	bne     L0227
+	bne     L0308
 	lda     _i
 	cmp     #$40
-L0227:	bcs     L0221
+L0308:	bcs     L0302
 ;
-; PPU.vram.data = 0x00;
+; PPU.vram.data = 0x55;
 ;
-	lda     #$00
+	lda     #$55
 	sta     $2007
 ;
 ; for(i = 0; i < 64; i++) {
@@ -810,15 +978,55 @@ L0227:	bcs     L0221
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L0229
+	bcc     L030A
 	inx
-L0229:	sta     _i
+L030A:	sta     _i
 	stx     _i+1
-	jmp     L0220
+	jmp     L0301
+;
+; PPU.vram.address = 0x28;
+;
+L0302:	lda     #$28
+	sta     $2006
+;
+; PPU.vram.address = 0x00;
+;
+	lda     #$00
+	sta     $2006
+;
+; for(i = 0; i < 15; i++) {
+;
+	sta     _i
+	sta     _i+1
+L0314:	lda     _i+1
+	cmp     #$00
+	bne     L031B
+	lda     _i
+	cmp     #$0F
+L031B:	bcs     L0315
+;
+; copyBgLine(15 + i);
+;
+	lda     _i
+	clc
+	adc     #$0F
+	jsr     _copyBgLine
+;
+; for(i = 0; i < 15; i++) {
+;
+	lda     _i
+	ldx     _i+1
+	clc
+	adc     #$01
+	bcc     L031D
+	inx
+L031D:	sta     _i
+	stx     _i+1
+	jmp     L0314
 ;
 ; }
 ;
-L0221:	jmp     incsp1
+L0315:	rts
 
 .endproc
 
@@ -843,11 +1051,11 @@ L0221:	jmp     incsp1
 ;
 ; while(*ptr != 127) {
 ;
-	jmp     L0255
+	jmp     L0349
 ;
 ; sprites[id].x = x + *(ptr++);
 ;
-L0253:	ldy     #$06
+L0347:	ldy     #$06
 	ldx     #$00
 	lda     (sp),y
 	jsr     aslax2
@@ -871,9 +1079,9 @@ L0253:	ldy     #$06
 	stx     regsave+1
 	clc
 	adc     #$01
-	bcc     L025B
+	bcc     L034F
 	inx
-L025B:	jsr     staxysp
+L034F:	jsr     staxysp
 	ldx     #$00
 	lda     (regsave,x)
 	jsr     tosadda0
@@ -906,9 +1114,9 @@ L025B:	jsr     staxysp
 	stx     regsave+1
 	clc
 	adc     #$01
-	bcc     L0260
+	bcc     L0354
 	inx
-L0260:	jsr     staxysp
+L0354:	jsr     staxysp
 	ldx     #$00
 	lda     (regsave,x)
 	jsr     tosadda0
@@ -938,9 +1146,9 @@ L0260:	jsr     staxysp
 	stx     regsave+1
 	clc
 	adc     #$01
-	bcc     L0265
+	bcc     L0359
 	inx
-L0265:	jsr     staxysp
+L0359:	jsr     staxysp
 	ldy     #$00
 	lda     (regsave),y
 	iny
@@ -969,9 +1177,9 @@ L0265:	jsr     staxysp
 	stx     regsave+1
 	clc
 	adc     #$01
-	bcc     L026A
+	bcc     L035E
 	inx
-L026A:	jsr     staxysp
+L035E:	jsr     staxysp
 	ldy     #$00
 	lda     (regsave),y
 	ldy     #$02
@@ -987,7 +1195,7 @@ L026A:	jsr     staxysp
 ;
 ; while(*ptr != 127) {
 ;
-L0255:	ldy     #$01
+L0349:	ldy     #$01
 	lda     (sp),y
 	sta     ptr1+1
 	dey
@@ -995,7 +1203,7 @@ L0255:	ldy     #$01
 	sta     ptr1
 	lda     (ptr1),y
 	cmp     #$7F
-	jne     L0253
+	jne     L0347
 ;
 ; return id;
 ;
@@ -1006,6 +1214,518 @@ L0255:	ldy     #$01
 ; }
 ;
 	jmp     incsp7
+
+.endproc
+
+; ---------------------------------------------------------------
+; void __near__ playerUpdate (unsigned char)
+; ---------------------------------------------------------------
+
+.segment	"CODE"
+
+.proc	_playerUpdate: near
+
+.segment	"CODE"
+
+;
+; void playerUpdate(uint8_t id) {
+;
+	jsr     pusha
+;
+; if(InputPort1 & BUTTON_UP) {
+;
+	lda     _InputPort1
+	and     #$08
+	beq     L0418
+;
+; if (entities[id].vy > -6) {
+;
+	ldx     #$00
+	lda     (sp,x)
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	tay
+	txa
+	adc     #>(_entities)
+	tax
+	tya
+	ldy     #$05
+	jsr     ldaidx
+	sec
+	sbc     #$FB
+	bvs     L0367
+	eor     #$80
+L0367:	jpl     L0419
+;
+; entities[id].vy -= 1;
+;
+	ldx     #$00
+	lda     (sp,x)
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	tay
+	txa
+	adc     #>(_entities)
+	tax
+	tya
+	jsr     pushax
+	ldy     #$05
+	jsr     ldaidx
+	sec
+	sbc     #$01
+	jsr     staspidx
+;
+; else if(InputPort1 & BUTTON_DOWN) {
+;
+	jmp     L0419
+L0418:	lda     _InputPort1
+	and     #$04
+	beq     L036C
+;
+; if (entities[id].vy < 6) {
+;
+	ldx     #$00
+	lda     (sp,x)
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	tay
+	txa
+	adc     #>(_entities)
+	tax
+	tya
+	ldy     #$05
+	jsr     ldaidx
+	sec
+	sbc     #$06
+	bvc     L0371
+	eor     #$80
+L0371:	jpl     L0419
+;
+; entities[id].vy += 1;
+;
+	ldx     #$00
+	lda     (sp,x)
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	tay
+	txa
+	adc     #>(_entities)
+	tax
+	tya
+	jsr     pushax
+	ldy     #$05
+	jsr     ldaidx
+	clc
+	adc     #$01
+	jsr     staspidx
+;
+; } else if(entities[id].vy > 2) {
+;
+	jmp     L0419
+L036C:	tax
+	lda     (sp,x)
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	tay
+	txa
+	adc     #>(_entities)
+	tax
+	tya
+	ldy     #$05
+	jsr     ldaidx
+	sec
+	sbc     #$03
+	bvs     L0379
+	eor     #$80
+L0379:	bpl     L0376
+;
+; entities[id].vy -= 2;
+;
+	ldx     #$00
+	lda     (sp,x)
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	tay
+	txa
+	adc     #>(_entities)
+	tax
+	tya
+	jsr     pushax
+	ldy     #$05
+	jsr     ldaidx
+	sec
+	sbc     #$02
+	jsr     staspidx
+;
+; } else if(entities[id].vy < -2) {
+;
+	jmp     L0419
+L0376:	ldx     #$00
+	lda     (sp,x)
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	tay
+	txa
+	adc     #>(_entities)
+	tax
+	tya
+	ldy     #$05
+	jsr     ldaidx
+	sec
+	sbc     #$FE
+	bvc     L0381
+	eor     #$80
+L0381:	bpl     L037E
+;
+; entities[id].vy += 2;
+;
+	ldx     #$00
+	lda     (sp,x)
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	tay
+	txa
+	adc     #>(_entities)
+	tax
+	tya
+	jsr     pushax
+	ldy     #$05
+	jsr     ldaidx
+	clc
+	adc     #$02
+	jsr     staspidx
+;
+; } else {
+;
+	jmp     L0419
+;
+; entities[id].vy = 0;
+;
+L037E:	ldx     #$00
+	lda     (sp,x)
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	sta     ptr1
+	txa
+	adc     #>(_entities)
+	sta     ptr1+1
+	lda     #$00
+	ldy     #$05
+	sta     (ptr1),y
+;
+; if(InputPort1 & BUTTON_LEFT) {
+;
+L0419:	lda     _InputPort1
+	and     #$02
+	beq     L041A
+;
+; if (entities[id].vx > -6) {
+;
+	ldx     #$00
+	lda     (sp,x)
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	tay
+	txa
+	adc     #>(_entities)
+	tax
+	tya
+	ldy     #$04
+	jsr     ldaidx
+	sec
+	sbc     #$FB
+	bvs     L038E
+	eor     #$80
+L038E:	jpl     L03AA
+;
+; --entities[id].vx;
+;
+	ldx     #$00
+	lda     (sp,x)
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	sta     ptr1
+	txa
+	adc     #>(_entities)
+	sta     ptr1+1
+	ldy     #$04
+	lda     (ptr1),y
+	sec
+	sbc     #$01
+;
+; } else if(InputPort1 & BUTTON_RIGHT) {
+;
+	jmp     L0417
+L041A:	lda     _InputPort1
+	and     #$01
+	beq     L0392
+;
+; if (entities[id].vx < 6) {
+;
+	ldx     #$00
+	lda     (sp,x)
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	tay
+	txa
+	adc     #>(_entities)
+	tax
+	tya
+	ldy     #$04
+	jsr     ldaidx
+	sec
+	sbc     #$06
+	bvc     L0397
+	eor     #$80
+L0397:	jpl     L03AA
+;
+; ++entities[id].vx;
+;
+	ldx     #$00
+	lda     (sp,x)
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	sta     ptr1
+	txa
+	adc     #>(_entities)
+	sta     ptr1+1
+	ldy     #$04
+	lda     #$01
+	clc
+	adc     (ptr1),y
+;
+; } else if(entities[id].vx > 2) {
+;
+	jmp     L0417
+L0392:	tax
+	lda     (sp,x)
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	tay
+	txa
+	adc     #>(_entities)
+	tax
+	tya
+	ldy     #$04
+	jsr     ldaidx
+	sec
+	sbc     #$03
+	bvs     L039E
+	eor     #$80
+L039E:	bpl     L039B
+;
+; entities[id].vx -= 2;
+;
+	ldx     #$00
+	lda     (sp,x)
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	tay
+	txa
+	adc     #>(_entities)
+	tax
+	tya
+	jsr     pushax
+	ldy     #$04
+	jsr     ldaidx
+	sec
+	sbc     #$02
+	jsr     staspidx
+;
+; } else if(entities[id].vx < -2) {
+;
+	jmp     L03AA
+L039B:	ldx     #$00
+	lda     (sp,x)
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	tay
+	txa
+	adc     #>(_entities)
+	tax
+	tya
+	ldy     #$04
+	jsr     ldaidx
+	sec
+	sbc     #$FE
+	bvc     L03A6
+	eor     #$80
+L03A6:	bpl     L03A3
+;
+; entities[id].vx += 2;
+;
+	ldx     #$00
+	lda     (sp,x)
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	tay
+	txa
+	adc     #>(_entities)
+	tax
+	tya
+	jsr     pushax
+	ldy     #$04
+	jsr     ldaidx
+	clc
+	adc     #$02
+	jsr     staspidx
+;
+; } else {
+;
+	jmp     L03AA
+;
+; entities[id].vx = 0;
+;
+L03A3:	ldx     #$00
+	lda     (sp,x)
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	sta     ptr1
+	txa
+	adc     #>(_entities)
+	sta     ptr1+1
+	lda     #$00
+	ldy     #$04
+L0417:	sta     (ptr1),y
+;
+; entities[id].x += entities[id].vx;
+;
+L03AA:	ldx     #$00
+	lda     (sp,x)
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	tay
+	txa
+	adc     #>(_entities)
+	tax
+	tya
+	jsr     pushax
+	sta     ptr1
+	stx     ptr1+1
+	ldy     #$02
+	lda     (ptr1),y
+	jsr     pusha0
+	ldy     #$04
+	lda     (sp),y
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	tay
+	txa
+	adc     #>(_entities)
+	tax
+	tya
+	ldy     #$04
+	jsr     ldaidx
+	jsr     tosaddax
+	ldy     #$02
+	jsr     staspidx
+;
+; entities[id].y += entities[id].vy;
+;
+	ldx     #$00
+	lda     (sp,x)
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	tay
+	txa
+	adc     #>(_entities)
+	tax
+	tya
+	jsr     pushax
+	sta     ptr1
+	stx     ptr1+1
+	ldy     #$03
+	lda     (ptr1),y
+	jsr     pusha0
+	ldy     #$04
+	lda     (sp),y
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	tay
+	txa
+	adc     #>(_entities)
+	tax
+	tya
+	ldy     #$05
+	jsr     ldaidx
+	jsr     tosaddax
+	ldy     #$03
+	jsr     staspidx
+;
+; drawMetaSprite(0, entities[id].x, entities[id].y, playerSpriteFrames[(FrameCount >> 2) & 0x01]);
+;
+	jsr     decsp3
+	lda     #$00
+	ldy     #$02
+	sta     (sp),y
+	iny
+	tax
+	lda     (sp),y
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	sta     ptr1
+	txa
+	adc     #>(_entities)
+	sta     ptr1+1
+	dey
+	lda     (ptr1),y
+	dey
+	sta     (sp),y
+	ldy     #$03
+	ldx     #$00
+	lda     (sp),y
+	jsr     mulax9
+	clc
+	adc     #<(_entities)
+	sta     ptr1
+	txa
+	adc     #>(_entities)
+	sta     ptr1+1
+	lda     (ptr1),y
+	ldy     #$00
+	sta     (sp),y
+	lda     _FrameCount
+	lsr     a
+	lsr     a
+	and     #$01
+	jsr     pusha0
+	lda     #$11
+	jsr     tosmula0
+	clc
+	adc     #<(_playerSpriteFrames)
+	tay
+	txa
+	adc     #>(_playerSpriteFrames)
+	tax
+	tya
+	jsr     _drawMetaSprite
+;
+; }
+;
+	jmp     incsp1
 
 .endproc
 
@@ -1034,12 +1754,12 @@ L0255:	ldy     #$01
 ;
 	sta     _i
 	sta     _i+1
-L0274:	lda     _i+1
+L03C6:	lda     _i+1
 	cmp     #$00
-	bne     L027C
+	bne     L03CE
 	lda     _i
 	cmp     #$20
-L027C:	bcs     L0275
+L03CE:	bcs     L03C7
 ;
 ; PPU.vram.data = PALETTE[i];
 ;
@@ -1056,56 +1776,55 @@ L027C:	bcs     L0275
 ; for ( i = 0; i < sizeof(PALETTE); ++i ) {
 ;
 	inc     _i
-	bne     L0274
+	bne     L03C6
 	inc     _i+1
-	jmp     L0274
+	jmp     L03C6
 ;
 ; bankswitch(0);
 ;
-L0275:	lda     #$00
+L03C7:	lda     #$00
 	jsr     _bankswitch
 ;
-; drawStatus();
+; fillBackground();
 ;
-	jsr     _drawStatus
-;
-; drawBackground(1);
-;
-	lda     #$01
-	jsr     _drawBackground
-;
-; drawBackground(0);
-;
-	lda     #$00
-	jsr     _drawBackground
+	jsr     _fillBackground
 ;
 ; Scroll = 0;
 ;
-	ldx     #$00
-	txa
+	lda     #$00
 	sta     _Scroll
 	sta     _Scroll+1
 ;
-; sprites[0].x = 72;
-;
-	lda     #$48
-	sta     _sprites+3
-;
-; sprites[0].y = 16;
-;
-	lda     #$10
-	sta     _sprites
-;
-; sprites[0].tile_index = 0xFF;
-;
-	lda     #$FF
-	sta     _sprites+1
-;
-; playerX = 32;
+; entities[0].x = 32;
 ;
 	lda     #$20
-	sta     _playerX
-	stx     _playerX+1
+	sta     _entities+2
+;
+; entities[0].y = 128;
+;
+	lda     #$80
+	sta     _entities+3
+;
+; entities[0].vx = 0;
+;
+	lda     #$00
+	sta     _entities+4
+;
+; entities[0].vy = 0;
+;
+	sta     _entities+5
+;
+; entities[0].health = 255;
+;
+	lda     #$FF
+	sta     _entities+6
+;
+; entities[0].update = (void (*)(uint8_t))playerUpdate;
+;
+	lda     #<(_playerUpdate)
+	sta     _entities
+	lda     #>(_playerUpdate)
+	sta     _entities+1
 ;
 ; VRAMUpdateReady = 1;
 ;
@@ -1129,253 +1848,67 @@ L0275:	lda     #$00
 ;
 ; Scroll = 0;
 ;
-	txa
+	lda     #$00
 	sta     _Scroll
 	sta     _Scroll+1
 ;
-; SplitEnable = 1;
-;
-	lda     #$01
-	sta     _SplitEnable
-;
 ; WaitFrame();
 ;
-L02A6:	jsr     _WaitFrame
+L03F9:	jsr     _WaitFrame
 ;
-; if(InputPort1 & BUTTON_UP) {
+; if(FrameCount > 0x30) {
 ;
-	lda     _InputPort1
-	and     #$08
-	beq     L0300
+	lda     _FrameCount
+	cmp     #$31
+	lda     #$00
+	bcc     L041C
 ;
-; if (playerY > 0) {
+; if(Scroll > 0) {
 ;
-	lda     _playerY
-	ora     _playerY+1
-	beq     L0300
+	lda     _Scroll
+	ora     _Scroll+1
+	beq     L0400
 ;
-; --playerY;
+; --Scroll;
 ;
-	lda     _playerY
+	lda     _Scroll
 	sec
 	sbc     #$01
-	sta     _playerY
-	bcs     L0300
-	dec     _playerY+1
+	sta     _Scroll
+	bcs     L0404
+	dec     _Scroll+1
 ;
-; if(InputPort1 & BUTTON_DOWN) {
+; if(Scroll == 255) {
 ;
-L0300:	lda     _InputPort1
-	and     #$04
-	beq     L0301
+L0404:	lda     _Scroll+1
+	bne     L040A
+	lda     _Scroll
+	cmp     #$FF
+	bne     L040A
 ;
-; if (playerY < 240) {
+; Scroll = 239;
 ;
-	lda     _playerY+1
-	cmp     #$00
-	bne     L02B6
-	lda     _playerY
-	cmp     #$F0
-L02B6:	bcs     L0301
-;
-; ++playerY;
-;
-	inc     _playerY
-	bne     L0301
-	inc     _playerY+1
-;
-; if(InputPort1 & BUTTON_LEFT) {
-;
-L0301:	lda     _InputPort1
-	and     #$02
-	beq     L0302
-;
-; if (playerSpeedX > -8) {
-;
-	lda     _playerSpeedX
-	sec
-	sbc     #$F9
-	bvs     L02BE
-	eor     #$80
-L02BE:	bpl     L02DA
-;
-; --playerSpeedX;
-;
-	dec     _playerSpeedX
-	bpl     L02DA
-;
-; } else if(InputPort1 & BUTTON_RIGHT) {
-;
-	jmp     L02DA
-L0302:	lda     _InputPort1
-	and     #$01
-	beq     L0303
-;
-; if (playerSpeedX < 8) {
-;
-	lda     _playerSpeedX
-	sec
-	sbc     #$08
-	bvc     L02C7
-	eor     #$80
-L02C7:	bpl     L02DA
-;
-; ++playerSpeedX;
-;
-	inc     _playerSpeedX
-	bpl     L02DA
-;
-; } else if(playerSpeedX > 3) {
-;
-	jmp     L02DA
-L0303:	lda     _playerSpeedX
-	sec
-	sbc     #$04
-	bvs     L02CE
-	eor     #$80
-L02CE:	bpl     L0304
-;
-; playerSpeedX -= 4;
-;
-	lda     _playerSpeedX
-	sec
-	sbc     #$04
-	sta     _playerSpeedX
-	bpl     L02DA
-;
-; } else if(playerSpeedX < -3) {
-;
-	jmp     L02DA
-L0304:	lda     _playerSpeedX
-	sec
-	sbc     #$FD
-	bvc     L02D6
-	eor     #$80
-L02D6:	asl     a
-	lda     #$00
-	bcc     L0306
-;
-; playerSpeedX += 4;
-;
-	lda     #$04
-	clc
-	adc     _playerSpeedX
-	sta     _playerSpeedX
-	bpl     L02DA
+	ldx     #$00
 ;
 ; } else {
 ;
-	jmp     L02DA
+	jmp     L041E
 ;
-; playerSpeedX = 0;
+; Scroll = 256 + 239;
 ;
-L0306:	sta     _playerSpeedX
-;
-; if(playerX < Scroll + 32 && Scroll > 0) {
-;
-L02DA:	lda     _playerX
-	ldx     _playerX+1
-	jsr     pushax
-	lda     _Scroll
-	ldx     _Scroll+1
-	clc
-	adc     #$20
-	bcc     L02DF
-	inx
-L02DF:	jsr     tosicmp
-	bcs     L02DD
-	lda     _Scroll
-	ora     _Scroll+1
-	beq     L02DD
-;
-; Scroll -= 2;
-;
-	lda     _Scroll
-	sec
-	sbc     #$02
+L0400:	ldx     #$01
+L041E:	lda     #$EF
 	sta     _Scroll
-	bcs     L02DD
-	dec     _Scroll+1
+	stx     _Scroll+1
 ;
-; if(playerX > Scroll + 256 - 32 && Scroll < 256) {
+; FrameCount = 0;
 ;
-L02DD:	lda     _playerX
-	ldx     _playerX+1
-	jsr     pushax
-	lda     _Scroll
-	ldx     _Scroll+1
-	inx
-	sec
-	sbc     #$20
-	bcs     L02E8
-	dex
-L02E8:	jsr     tosicmp
-	bcc     L02ED
-	beq     L02ED
-	ldx     _Scroll+1
-	cpx     #$01
-	bcs     L02ED
+L040A:	lda     #$00
+	sta     _FrameCount
 ;
-; Scroll += 2;
+; playerUpdate(0);
 ;
-	lda     #$02
-	clc
-	adc     _Scroll
-	sta     _Scroll
-	bcc     L02ED
-	inc     _Scroll+1
-;
-; playerX += playerSpeedX;
-;
-L02ED:	ldx     #$00
-	lda     _playerSpeedX
-	cmp     #$80
-	bcc     L02FF
-	dex
-	clc
-L02FF:	adc     _playerX
-	sta     _playerX
-	txa
-	adc     _playerX+1
-	sta     _playerX+1
-;
-; relativePlayerX = playerX - Scroll;
-;
-	lda     _playerX
-	sec
-	sbc     _Scroll
-	sta     _relativePlayerX
-	lda     _playerX+1
-	sbc     _Scroll+1
-	sta     _relativePlayerX+1
-;
-; drawMetaSprite(1, relativePlayerX, playerY, playerSpriteFrames[(FrameCount >> 2) & 0x01]);
-;
-	jsr     decsp3
-	lda     #$01
-	ldy     #$02
-	sta     (sp),y
-	lda     _relativePlayerX
-	dey
-	sta     (sp),y
-	lda     _playerY
-	dey
-	sta     (sp),y
-	lda     _FrameCount
-	lsr     a
-	lsr     a
-	and     #$01
-	jsr     pusha0
-	lda     #$11
-	jsr     tosmula0
-	clc
-	adc     #<(_playerSpriteFrames)
-	tay
-	txa
-	adc     #>(_playerSpriteFrames)
-	tax
-	tya
-	jsr     _drawMetaSprite
+L041C:	jsr     _playerUpdate
 ;
 ; VRAMUpdateReady = 1;
 ;
@@ -1384,7 +1917,7 @@ L02FF:	adc     _playerX
 ;
 ; while (1) {
 ;
-	jmp     L02A6
+	jmp     L03F9
 
 .endproc
 
