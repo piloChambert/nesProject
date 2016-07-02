@@ -57,10 +57,6 @@ typedef struct _Sprite {
 } Sprite;
 
 typedef struct _Entity {
-    // update function
-    // parameter = entity id
-    void (*update)(uint8_t); 
-
     // position 
     uint8_t x;
     uint8_t y;
@@ -75,10 +71,10 @@ typedef struct _Entity {
     // list management
     uint8_t prev;  
     uint8_t next;
-} Entity;
 
-// 16?
-Entity entities[8]; 
+    // update function
+    void (*update)(void); 
+} Entity;
 
 extern uint8_t FrameCount;
 #pragma zpsym("FrameCount");
@@ -108,7 +104,8 @@ void __fastcall__ bankswitch(unsigned char bank);
 #pragma bss-name(push, "ZEROPAGE")
 size_t i, x, y, mapX, mapY, tileIndex;
 uint8_t tile, tileIdx;
-
+uint8_t currentEntityId; // parameter for update func ptr
+uint8_t currentMetaSpriteId; // reset it to 0 at each frame!
 #pragma bss-name(pop)
 
 #pragma bss-name(push, "OAM")
@@ -170,7 +167,7 @@ const uint8_t map[] = { 0x01, 0x03, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x
                         0x05, 0x05, 0x03, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05,
                         0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05};
 
-void copyBgLine(uint8_t line) {
+void __fastcall__ copyBgLine(uint8_t line) {
     for(tile = 0; tile < 64; tile++) {
         tileIdx = map[line * 16 + ((tile & 0x1F) >> 1)] << 1;
 
@@ -231,60 +228,124 @@ const uint8_t playerSpriteFrames[2][17] = {
 };
 
 // return next id
-uint8_t drawMetaSprite(uint8_t id, uint8_t x, uint8_t y, const uint8_t *data) {
+void __fastcall__ drawMetaSprite(uint8_t x, uint8_t y, const uint8_t *data) {
     // copy data at pos
     const uint8_t *ptr = data;
     while(*ptr != 127) {
-        sprites[id].x = x + *(ptr++);
-        sprites[id].y = y + *(ptr++);
-        sprites[id].tile_index = *(ptr++);
-        sprites[id].attributes = *(ptr++);
+        sprites[currentMetaSpriteId].x = x + *(ptr++);
+        sprites[currentMetaSpriteId].y = y + *(ptr++);
+        sprites[currentMetaSpriteId].tile_index = *(ptr++);
+        sprites[currentMetaSpriteId].attributes = *(ptr++);
 
-        id++;
+        currentMetaSpriteId++;
     }
-
-    return id;
 }
 
-void playerUpdate(uint8_t id) {
+// 16?
+#define ENTITY_COUNT 16
+Entity entities[ENTITY_COUNT]; 
+uint8_t freeEntityList = 0xFF;
+uint8_t entityList = 0xFF;
+
+// reset entity
+void initEntityList() {
+    for(i = 0; i < ENTITY_COUNT; i++) {
+        entities[i].x = 0;
+        entities[i].y = 0;
+        entities[i].vx = 0;
+        entities[i].vy = 0;
+        entities[i].update = NULL;
+        entities[i].health = 0;
+        entities[i].prev = i == 0? 0xFF : i - 1;
+        entities[i].next = i == ENTITY_COUNT - 1 ? 0x0FF : i + 1;
+    }
+
+    freeEntityList = 0;
+    entityList = 0xFF;
+}
+
+// push an entity to the list
+void pushEntity(uint8_t id, uint8_t *list) {
+    if(*list != 0xFF) {
+        entities[id].next = *list;
+        entities[*list].prev = id;
+        *list = id;
+    } else {
+        *list = id;
+    }
+}
+
+// remove an entity from the list
+void removeEntity(uint8_t id, uint8_t *list) {
+    // if it's the first element
+    if(*list == id) {
+        if(entities[id].next == 0xFF) {
+            *list = 0xFF; // empty list
+        } else {
+            *list = entities[id].next;
+            entities[*list].prev = 0xFF;
+        }
+    } else {
+        entities[entities[id].prev].next = entities[id].next;
+    }
+
+    entities[id].next = 0xFF;
+    entities[id].prev = 0xFF;
+}
+
+// pop the first entity of the list
+uint8_t popEntity(uint8_t *list) {
+    uint8_t newId = *list;
+
+    removeEntity(newId, list);
+
+    return newId;
+}
+
+void playerUpdate() {
     if(InputPort1 & BUTTON_UP) {
-        if (entities[id].vy > -6) {
-            entities[id].vy -= 1;
+        if (entities[currentEntityId].vy > -6) {
+            entities[currentEntityId].vy -= 1;
         }
     }
     else if(InputPort1 & BUTTON_DOWN) {
-        if (entities[id].vy < 6) {
-            entities[id].vy += 1;
+        if (entities[currentEntityId].vy < 6) {
+            entities[currentEntityId].vy += 1;
         }
-    } else if(entities[id].vy > 2) {
-        entities[id].vy -= 2;
-    } else if(entities[id].vy < -2) {
-        entities[id].vy += 2;
+    } else if(entities[currentEntityId].vy > 2) {
+        entities[currentEntityId].vy -= 2;
+    } else if(entities[currentEntityId].vy < -2) {
+        entities[currentEntityId].vy += 2;
     } else {
-        entities[id].vy = 0;
+        entities[currentEntityId].vy = 0;
     }
 
     if(InputPort1 & BUTTON_LEFT) {
-        if (entities[id].vx > -6) {
-            --entities[id].vx;
+        if (entities[currentEntityId].vx > -6) {
+            --entities[currentEntityId].vx;
         }
     } else if(InputPort1 & BUTTON_RIGHT) {
-        if (entities[id].vx < 6) {
-            ++entities[id].vx;
+        if (entities[currentEntityId].vx < 6) {
+            ++entities[currentEntityId].vx;
         }
-    } else if(entities[id].vx > 2) {
-        entities[id].vx -= 2;
-    } else if(entities[id].vx < -2) {
-        entities[id].vx += 2;
+    } else if(entities[currentEntityId].vx > 2) {
+        entities[currentEntityId].vx -= 2;
+    } else if(entities[currentEntityId].vx < -2) {
+        entities[currentEntityId].vx += 2;
     } else {
-        entities[id].vx = 0;
+        entities[currentEntityId].vx = 0;
     }
 
-    entities[id].x += entities[id].vx;
-    entities[id].y += entities[id].vy;
+    entities[currentEntityId].x += entities[currentEntityId].vx;
+    entities[currentEntityId].y += entities[currentEntityId].vy;
 
     // update player sprites
-    drawMetaSprite(0, entities[id].x, entities[id].y, playerSpriteFrames[(FrameCount >> 2) & 0x01]);
+    drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, playerSpriteFrames[(FrameCount >> 2) & 0x01]);
+
+    if(entities[currentEntityId].y > 240) {
+        removeEntity(currentEntityId, &entityList);
+        pushEntity(currentEntityId, &freeEntityList);
+    }
 }
 
 /**
@@ -292,6 +353,8 @@ void playerUpdate(uint8_t id) {
  * Unlike C programs on a computer, it takes no arguments and returns no value.
  */
 void main(void) {
+    uint8_t playerId;
+
     // load the palette data into PPU memory $3f00-$3f1f
     PPU.vram.address = 0x3f;
     PPU.vram.address = 0x00;
@@ -299,22 +362,34 @@ void main(void) {
         PPU.vram.data = PALETTE[i];
     }
 
+    initEntityList();
+
     bankswitch(0);
 
     fillBackground();
     Scroll = 0;
 
-    entities[0].x = 32;
-    entities[0].y = 128;
-    entities[0].vx = 0;
-    entities[0].vy = 0;
-    entities[0].health = 255;
-    entities[0].update = (void (*)(uint8_t))playerUpdate;
+    playerId = popEntity(&freeEntityList);
+    pushEntity(playerId, &entityList);
+    entities[playerId].x = 64;
+    entities[playerId].y = 128;
+    entities[playerId].vx = 0;
+    entities[playerId].vy = 0;
+    entities[playerId].health = 255;
+    entities[playerId].update = playerUpdate;
+
+    playerId = popEntity(&freeEntityList);
+    pushEntity(playerId, &entityList);
+    entities[playerId].x = playerId;
+    entities[playerId].y = 64;
+    entities[playerId].vx = 0;
+    entities[playerId].vy = 0;
+    entities[playerId].health = 255;
+    entities[playerId].update = playerUpdate;
 
     // tells the NMI to update
     // THIS ONE IS VERY IMPORTANT as without sprite 0 is not displayed and the NMI will be stuck!
     VRAMUpdateReady = 1;
-
 
     // enable NMI and rendering
     PPU.control = PPUCTRL_NAMETABLE_0 | PPUCTRL_INC_1_HORIZ | PPUCTRL_BPATTERN_0 | PPUCTRL_SPATTERN_1 | PPUCTRL_NMI_ON;
@@ -327,6 +402,8 @@ void main(void) {
     // infinite loop
     while (1) {
         WaitFrame();
+
+        currentMetaSpriteId = 0; // might be done in nmi?
 
         // Auto scroll
         if(FrameCount > 0x30) {
@@ -344,8 +421,12 @@ void main(void) {
         }
 
         // update game entity
-        //entities[0].update(0);
-        playerUpdate(0);
+        currentEntityId = entityList;
+        while(currentEntityId != 0xFF) {
+            uint8_t next = entities[currentEntityId].next;
+            entities[currentEntityId].update();
+            currentEntityId = next;
+        }
 
         // tells the NMI to update
         VRAMUpdateReady = 1;
