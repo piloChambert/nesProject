@@ -285,9 +285,6 @@ nmi:
     STA PPU_SCROLL
     STA PPU_SCROLL
 
-    LDA #%1001000 ; enable NMI, bg on table 0 and sprite on table 1
-    STA PPU_CTRL
-
     LDA #%00011110 ; 
     STA PPU_MASK
 

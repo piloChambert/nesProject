@@ -1044,36 +1044,36 @@ _mapLineCount:
 _playerSpriteFrames:
 	.byte	$00
 	.byte	$00
+	.byte	$20
+	.byte	$00
+	.byte	$08
+	.byte	$00
+	.byte	$21
 	.byte	$00
 	.byte	$00
 	.byte	$08
-	.byte	$00
-	.byte	$01
-	.byte	$00
-	.byte	$00
-	.byte	$08
-	.byte	$10
+	.byte	$30
 	.byte	$00
 	.byte	$08
 	.byte	$08
-	.byte	$11
+	.byte	$31
 	.byte	$00
 	.byte	$7F
 	.byte	$00
 	.byte	$00
-	.byte	$02
+	.byte	$22
 	.byte	$00
 	.byte	$08
 	.byte	$00
-	.byte	$03
+	.byte	$23
 	.byte	$00
 	.byte	$00
 	.byte	$08
-	.byte	$12
+	.byte	$32
 	.byte	$00
 	.byte	$08
 	.byte	$08
-	.byte	$13
+	.byte	$33
 	.byte	$00
 	.byte	$7F
 
@@ -1140,7 +1140,7 @@ L03E4:
 ; for(tile = 0; tile < 64; tile++) {
 ;
 	lda     #$00
-L05F4:	sta     _tile
+L05F3:	sta     _tile
 	cmp     #$40
 	bcs     L03E8
 ;
@@ -1181,7 +1181,7 @@ L05F4:	sta     _tile
 ;
 	lda     _tile
 	and     #$01
-	beq     L05F3
+	beq     L05F2
 ;
 ; ++tileIdx;
 ;
@@ -1189,7 +1189,7 @@ L05F4:	sta     _tile
 ;
 ; if(tile >= 32) {
 ;
-L05F3:	lda     _tile
+L05F2:	lda     _tile
 	cmp     #$20
 	bcc     L03F7
 ;
@@ -1220,7 +1220,7 @@ L03FD:	sta     L03E4
 	lda     _tile
 	clc
 	adc     #$01
-	jmp     L05F4
+	jmp     L05F3
 ;
 ; }
 ;
@@ -1333,10 +1333,10 @@ L0424:	bcs     L041E
 	ldx     _mapCurrentLine+1
 	clc
 	adc     #$0F
-	bcc     L05F5
+	bcc     L05F4
 	inx
 	clc
-L05F5:	adc     _i
+L05F4:	adc     _i
 	pha
 	txa
 	adc     _i+1
@@ -1470,7 +1470,7 @@ L0446:	rts
 ;
 ; sprites[currentMetaSpriteId].x = x + *(ptr++);
 ;
-L05F6:	lda     _currentMetaSpriteId
+L05F5:	lda     _currentMetaSpriteId
 	jsr     aslax2
 	clc
 	adc     #<(_sprites)
@@ -1613,7 +1613,7 @@ L047A:	ldy     #$01
 	ldx     #$00
 	lda     (ptr1),y
 	cmp     #$7F
-	jne     L05F6
+	jne     L05F5
 ;
 ; }
 ;
@@ -1751,11 +1751,11 @@ L049C:	jcs     L0496
 	ora     _i+1
 	bne     L04B5
 	lda     #$FF
-	jmp     L05F7
+	jmp     L05F6
 L04B5:	lda     _i
 	sec
 	sbc     #$01
-L05F7:	iny
+L05F6:	iny
 	sta     (ptr1),y
 ;
 ; entities[i].next = i == ENTITY_COUNT - 1 ? 0x0FF : i + 1;
@@ -1775,11 +1775,11 @@ L05F7:	iny
 	cmp     #$0F
 	bne     L04BE
 	lda     #$FF
-	jmp     L05F8
+	jmp     L05F7
 L04BE:	lda     _i
 	clc
 	adc     #$01
-L05F8:	iny
+L05F7:	iny
 	sta     (ptr1),y
 ;
 ; for(i = 0; i < ENTITY_COUNT; i++) {
@@ -1930,7 +1930,7 @@ L04C8:	ldy     #$01
 	lda     (ptr1),y
 	ldy     #$02
 	cmp     (sp),y
-	bne     L0602
+	bne     L0601
 ;
 ; if(entities[id].next == 0xFF) {
 ;
@@ -2007,7 +2007,7 @@ L04D8:	jsr     pushw0sp
 ;
 ; entities[entities[id].prev].next = entities[id].next;
 ;
-L0602:	lda     (sp),y
+L0601:	lda     (sp),y
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -2143,7 +2143,7 @@ L04E4:	ldy     #$02
 ;
 	lda     _InputPort1
 	and     #$08
-	beq     L0604
+	beq     L0603
 ;
 ; if (entities[currentEntityId].vy > -6) {
 ;
@@ -2163,7 +2163,7 @@ L04E4:	ldy     #$02
 	sbc     #$FB
 	bvs     L04FC
 	eor     #$80
-L04FC:	jpl     L0608
+L04FC:	jpl     L0607
 ;
 ; entities[currentEntityId].vy -= 1;
 ;
@@ -2186,11 +2186,11 @@ L04FC:	jpl     L0608
 ;
 ; else if(InputPort1 & BUTTON_DOWN) {
 ;
-	jmp     L0608
-L0604:	lda     _InputPort1
+	jmp     L0607
+L0603:	lda     _InputPort1
 	ldx     #$00
 	and     #$04
-	beq     L0605
+	beq     L0604
 ;
 ; if (entities[currentEntityId].vy < 6) {
 ;
@@ -2209,7 +2209,7 @@ L0604:	lda     _InputPort1
 	sbc     #$06
 	bvc     L0506
 	eor     #$80
-L0506:	jpl     L0608
+L0506:	jpl     L0607
 ;
 ; entities[currentEntityId].vy += 1;
 ;
@@ -2232,8 +2232,8 @@ L0506:	jpl     L0608
 ;
 ; } else if(entities[currentEntityId].vy > 2) {
 ;
-	jmp     L0608
-L0605:	lda     _currentEntityId
+	jmp     L0607
+L0604:	lda     _currentEntityId
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -2250,7 +2250,7 @@ L0605:	lda     _currentEntityId
 	eor     #$80
 L050E:	asl     a
 	ldx     #$00
-	bcc     L0606
+	bcc     L0605
 ;
 ; entities[currentEntityId].vy -= 2;
 ;
@@ -2272,8 +2272,8 @@ L050E:	asl     a
 ;
 ; } else if(entities[currentEntityId].vy < -2) {
 ;
-	jmp     L0608
-L0606:	lda     _currentEntityId
+	jmp     L0607
+L0605:	lda     _currentEntityId
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -2290,7 +2290,7 @@ L0606:	lda     _currentEntityId
 	eor     #$80
 L0516:	asl     a
 	ldx     #$00
-	bcc     L0607
+	bcc     L0606
 ;
 ; entities[currentEntityId].vy += 2;
 ;
@@ -2312,11 +2312,11 @@ L0516:	asl     a
 ;
 ; } else {
 ;
-	jmp     L0608
+	jmp     L0607
 ;
 ; entities[currentEntityId].vy = 0;
 ;
-L0607:	lda     _currentEntityId
+L0606:	lda     _currentEntityId
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -2329,9 +2329,9 @@ L0607:	lda     _currentEntityId
 ;
 ; if(InputPort1 & BUTTON_LEFT) {
 ;
-L0608:	lda     _InputPort1
+L0607:	lda     _InputPort1
 	and     #$02
-	beq     L0609
+	beq     L0608
 ;
 ; if (entities[currentEntityId].vx > -6) {
 ;
@@ -2353,7 +2353,7 @@ L0608:	lda     _InputPort1
 	eor     #$80
 L0523:	asl     a
 	ldx     #$00
-	jcc     L060D
+	jcc     L060C
 ;
 ; --entities[currentEntityId].vx;
 ;
@@ -2371,11 +2371,11 @@ L0523:	asl     a
 ;
 ; } else if(InputPort1 & BUTTON_RIGHT) {
 ;
-	jmp     L0603
-L0609:	lda     _InputPort1
+	jmp     L0602
+L0608:	lda     _InputPort1
 	ldx     #$00
 	and     #$01
-	beq     L060A
+	beq     L0609
 ;
 ; if (entities[currentEntityId].vx < 6) {
 ;
@@ -2396,7 +2396,7 @@ L0609:	lda     _InputPort1
 	eor     #$80
 L052C:	asl     a
 	ldx     #$00
-	jcc     L060D
+	jcc     L060C
 ;
 ; ++entities[currentEntityId].vx;
 ;
@@ -2414,8 +2414,8 @@ L052C:	asl     a
 ;
 ; } else if(entities[currentEntityId].vx > 2) {
 ;
-	jmp     L0603
-L060A:	lda     _currentEntityId
+	jmp     L0602
+L0609:	lda     _currentEntityId
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -2432,7 +2432,7 @@ L060A:	lda     _currentEntityId
 	eor     #$80
 L0533:	asl     a
 	ldx     #$00
-	bcc     L060B
+	bcc     L060A
 ;
 ; entities[currentEntityId].vx -= 2;
 ;
@@ -2455,7 +2455,7 @@ L0533:	asl     a
 ; } else if(entities[currentEntityId].vx < -2) {
 ;
 	jmp     L053F
-L060B:	lda     _currentEntityId
+L060A:	lda     _currentEntityId
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -2472,7 +2472,7 @@ L060B:	lda     _currentEntityId
 	eor     #$80
 L053B:	asl     a
 	ldx     #$00
-	bcc     L060C
+	bcc     L060B
 ;
 ; entities[currentEntityId].vx += 2;
 ;
@@ -2498,7 +2498,7 @@ L053B:	asl     a
 ;
 ; entities[currentEntityId].vx = 0;
 ;
-L060C:	lda     _currentEntityId
+L060B:	lda     _currentEntityId
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -2507,12 +2507,12 @@ L060C:	lda     _currentEntityId
 	adc     #>(_entities)
 	sta     ptr1+1
 	lda     #$00
-L0603:	sta     (ptr1),y
+L0602:	sta     (ptr1),y
 ;
 ; entities[currentEntityId].x += entities[currentEntityId].vx;
 ;
 L053F:	ldx     #$00
-L060D:	lda     _currentEntityId
+L060C:	lda     _currentEntityId
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -2575,7 +2575,7 @@ L060D:	lda     _currentEntityId
 	ldy     #$01
 	jsr     staspidx
 ;
-; drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, playerSpriteFrames[(FrameCount >> 2) & 0x01]);
+; drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, playerSpriteFrames[(FrameCount >> 3) & 0x01]);
 ;
 	jsr     decsp2
 	ldx     #$00
@@ -2603,6 +2603,7 @@ L060D:	lda     _currentEntityId
 	dey
 	sta     (sp),y
 	lda     _FrameCount
+	lsr     a
 	lsr     a
 	lsr     a
 	and     #$01
@@ -2972,24 +2973,20 @@ L05B3:	jsr     _WaitFrame
 	lda     #$00
 	sta     _currentMetaSpriteId
 ;
-; if(FrameCount > 0x04 && mapCurrentLine != 0xFFFF) { // stop when mapCurrentLine == -1
+; if(!(FrameCount & 0x00) && mapCurrentLine != 0xFFFF) { // stop when mapCurrentLine == -1
 ;
-	lda     _FrameCount
-	cmp     #$05
-	ldx     #$00
-	jcc     L0618
 	lda     _mapCurrentLine+1
 	cmp     #$FF
-	bne     L0612
+	bne     L060F
 	lda     _mapCurrentLine
 	cmp     #$FF
-	jeq     L0618
+	jeq     L0616
 ;
 ; if(Scroll > 0) {
 ;
-L0612:	lda     _Scroll
+L060F:	lda     _Scroll
 	ora     _Scroll+1
-	beq     L05BF
+	beq     L05C0
 ;
 ; --Scroll;
 ;
@@ -2997,53 +2994,58 @@ L0612:	lda     _Scroll
 	sec
 	sbc     #$01
 	sta     _Scroll
-	bcs     L05C3
+	bcs     L05C4
 	dec     _Scroll+1
 ;
 ; if(Scroll == 255) {
 ;
-L05C3:	lda     _Scroll+1
-	bne     L05C9
+L05C4:	lda     _Scroll+1
+	bne     L05CA
 	lda     _Scroll
 	cmp     #$FF
-	bne     L05C9
+	bne     L05CA
+;
+; Scroll = 239;
+;
+	ldx     #$00
 ;
 ; } else {
 ;
-	jmp     L061D
+	jmp     L0618
 ;
 ; Scroll = 256 + 239;
 ;
-L05BF:	inx
-L061D:	lda     #$EF
+L05C0:	ldx     #$01
+L0618:	lda     #$EF
 	sta     _Scroll
 	stx     _Scroll+1
 ;
 ; if((Scroll & 0x0F) == 0x0F && mapCurrentLine != 0xFFFF) {
 ;
-L05C9:	lda     _Scroll
+L05CA:	lda     _Scroll
+	ldx     #$00
 	and     #$0F
 	cmp     #$0F
-	bne     L061C
+	bne     L0613
 	lda     _mapCurrentLine+1
 	cmp     #$FF
-	bne     L0614
+	bne     L0611
 	lda     _mapCurrentLine
 	cmp     #$FF
-	beq     L061C
+	beq     L0613
 ;
 ; --mapCurrentLine;
 ;
-L0614:	lda     _mapCurrentLine
+L0611:	lda     _mapCurrentLine
 	sec
 	sbc     #$01
 	sta     _mapCurrentLine
-	bcs     L05D4
+	bcs     L05D5
 	dec     _mapCurrentLine+1
 ;
 ; copyBgLine(map, mapCurrentLine);
 ;
-L05D4:	lda     #<(_map)
+L05D5:	lda     #<(_map)
 	ldx     #>(_map)
 	jsr     pushax
 	lda     _mapCurrentLine
@@ -3057,11 +3059,11 @@ L05D4:	lda     #<(_map)
 	lda     _Scroll+1
 	sbc     #$00
 	lda     #$00
-	bcc     L05DB
+	bcc     L05DC
 	ldx     #$28
-	jmp     L0615
-L05DB:	ldx     #$20
-L0615:	sta     ptr1
+	jmp     L0612
+L05DC:	ldx     #$20
+L0612:	sta     ptr1
 	stx     ptr1+1
 	lda     _Scroll
 	ldx     #$00
@@ -3078,24 +3080,19 @@ L0615:	sta     ptr1
 	adc     ptr1+1
 	sta     _BGDestAddr+1
 ;
-; FrameCount = 0;
-;
-L061C:	lda     #$00
-	sta     _FrameCount
-;
 ; currentEntityId = entityList;
 ;
-	tax
-L0618:	lda     _entityList
+L0616:	ldx     #$00
+L0613:	lda     _entityList
 	sta     _currentEntityId
 ;
 ; while(currentEntityId != 0xFF) {
 ;
-	jmp     L061A
+	jmp     L0615
 ;
 ; uint8_t next = entities[currentEntityId].next;
 ;
-L0619:	lda     _currentEntityId
+L0614:	lda     _currentEntityId
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -3138,9 +3135,9 @@ L0619:	lda     _currentEntityId
 ; while(currentEntityId != 0xFF) {
 ;
 	ldx     #$00
-L061A:	lda     _currentEntityId
+L0615:	lda     _currentEntityId
 	cmp     #$FF
-	bne     L0619
+	bne     L0614
 ;
 ; VRAMUpdateReady = 1;
 ;

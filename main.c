@@ -257,17 +257,17 @@ void fillBackground() {
 
 const uint8_t playerSpriteFrames[2][17] = {
     { // x, y, tile, attr
-        0, 0, 0x00, 0x00,
-        8, 0, 0x01, 0x00,
-        0, 8, 0x10, 0x00,
-        8, 8, 0x11, 0x00,
+        0, 0, 0x20, 0x00,
+        8, 0, 0x21, 0x00,
+        0, 8, 0x30, 0x00,
+        8, 8, 0x31, 0x00,
         127
     },
     { // x, y, tile, attr
-        0, 0, 0x02, 0x00,
-        8, 0, 0x03, 0x00,
-        0, 8, 0x12, 0x00,
-        8, 8, 0x13, 0x00,
+        0, 0, 0x22, 0x00,
+        8, 0, 0x23, 0x00,
+        0, 8, 0x32, 0x00,
+        8, 8, 0x33, 0x00,
         127
     },
 
@@ -386,7 +386,7 @@ void playerUpdate() {
     entities[currentEntityId].y += entities[currentEntityId].vy;
 
     // update player sprites
-    drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, playerSpriteFrames[(FrameCount >> 2) & 0x01]);
+    drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, playerSpriteFrames[(FrameCount >> 3) & 0x01]);
 
     if(entities[currentEntityId].y > 240) {
         removeEntity(currentEntityId, &entityList);
@@ -451,7 +451,7 @@ void main(void) {
         currentMetaSpriteId = 0; // might be done in nmi?
 
         // Auto scroll
-        if(FrameCount > 0x04 && mapCurrentLine != 0xFFFF) { // stop when mapCurrentLine == -1
+        if(!(FrameCount & 0x00) && mapCurrentLine != 0xFFFF) { // stop when mapCurrentLine == -1
             if(Scroll > 0) {
                 --Scroll;
 
@@ -467,8 +467,6 @@ void main(void) {
                 copyBgLine(map, mapCurrentLine);
                 BGDestAddr = (Scroll > 240 ? 0x2800 : 0x2000) + (((Scroll & 0xFF) >> 4) << 6);
             }
-
-            FrameCount = 0;
         }
 
         // update game entity
