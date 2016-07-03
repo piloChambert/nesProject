@@ -57,6 +57,10 @@ typedef struct _Sprite {
 } Sprite;
 
 typedef struct _Entity {
+    // list management
+    uint8_t prev;  
+    uint8_t next;
+
     // position 
     uint8_t x;
     uint8_t y;
@@ -67,10 +71,6 @@ typedef struct _Entity {
 
     // health
     uint8_t health;
-
-    // list management
-    uint8_t prev;  
-    uint8_t next;
 
     // update function
     void (*update)(void); 
@@ -120,14 +120,14 @@ uint16_t mapCurrentLine;
 Sprite sprites[64];
 #pragma bss-name(pop)
 
-const uint8_t PALETTE[] = { 0x22, 0x00, 0x10, 0x20,
-                            0x22, 0x11, 0x21, 0x31,
-                            0x22, 0x15, 0x25, 0x35,
-                            0x22, 0x19, 0x29, 0x39,
-                            0x22, 0x16, 0x05, 0x27,
-                            0x22, 0x11, 0x21, 0x31,
-                            0x22, 0x15, 0x25, 0x35,
-                            0x22, 0x19, 0x29, 0x39 };
+const uint8_t PALETTE[] = { 0x2A, 0x00, 0x10, 0x20,
+                            0x2A, 0x11, 0x21, 0x31,
+                            0x2A, 0x15, 0x25, 0x35,
+                            0x2A, 0x19, 0x29, 0x39,
+                            0x2A, 0x16, 0x05, 0x27,
+                            0x2A, 0x11, 0x21, 0x31,
+                            0x2A, 0x15, 0x25, 0x35,
+                            0x2A, 0x19, 0x29, 0x39 };
 
 const uint8_t mapWidth = 32; // tiles count
 
@@ -278,20 +278,36 @@ void __fastcall__ drawMetaSprite(uint8_t x, uint8_t y, const uint8_t *data) {
     // copy data at pos
     const uint8_t *ptr = data;
     while(*ptr != 127) {
-        sprites[currentMetaSpriteId].x = x + *(ptr++);
-        sprites[currentMetaSpriteId].y = y + *(ptr++);
-        sprites[currentMetaSpriteId].tile_index = *(ptr++);
-        sprites[currentMetaSpriteId].attributes = *(ptr++);
+        if(x + *ptr < 255) {
+            sprites[currentMetaSpriteId].x = x + *(ptr++);
+            sprites[currentMetaSpriteId].y = y + *(ptr++);
+            sprites[currentMetaSpriteId].tile_index = *(ptr++);
+            sprites[currentMetaSpriteId].attributes = *(ptr++);
 
-        currentMetaSpriteId++;
+            currentMetaSpriteId++;
+        } else {
+            ptr += 4; 
+        }
     }
 }
+
+void __fastcall__ drawSprite(uint8_t x, uint8_t y, uint8_t tile, uint8_t attr) {
+    // copy data at pos
+    sprites[currentMetaSpriteId].x = x;
+    sprites[currentMetaSpriteId].y = y;
+    sprites[currentMetaSpriteId].tile_index = tile;
+    sprites[currentMetaSpriteId].attributes = attr;
+
+    currentMetaSpriteId++;
+}
+
 
 // 16?
 #define ENTITY_COUNT 16
 Entity entities[ENTITY_COUNT]; 
 uint8_t freeEntityList = 0xFF;
 uint8_t entityList = 0xFF;
+uint8_t missileList = 0xFF;
 
 // reset entity
 void initEntityList() {
@@ -308,6 +324,7 @@ void initEntityList() {
 
     freeEntityList = 0;
     entityList = 0xFF;
+    missileList = 0xFF;
 }
 
 // push an entity to the list
@@ -348,6 +365,35 @@ uint8_t popEntity(uint8_t *list) {
     return newId;
 }
 
+void bulletUpdate() {
+    entities[currentEntityId].x += entities[currentEntityId].vx;
+    entities[currentEntityId].y += entities[currentEntityId].vy;
+
+    if(entities[currentEntityId].vy < 0 && entities[currentEntityId].y + entities[currentEntityId].vy > entities[currentEntityId].y) {
+        removeEntity(currentEntityId, &entityList);
+        pushEntity(currentEntityId, &freeEntityList);
+    }
+
+    // update player sprites
+    drawSprite(entities[currentEntityId].x, entities[currentEntityId].y, 0x60, 0x00);
+}
+
+void __fastcall__ spawnBullet(uint8_t x, uint8_t y) {
+    static uint8_t id;
+    id = popEntity(&freeEntityList);
+
+    // if there's a free entity
+    if(id != 0xFF) {
+        pushEntity(id, &entityList);
+        entities[id].x = x;
+        entities[id].y = y;
+        entities[id].vx = 0;
+        entities[id].vy = -4;
+        entities[id].health = 255;
+        entities[id].update = bulletUpdate;
+    }
+}
+
 void playerUpdate() {
     if(InputPort1 & BUTTON_UP) {
         if (entities[currentEntityId].vy > -6) {
@@ -382,16 +428,36 @@ void playerUpdate() {
         entities[currentEntityId].vx = 0;
     }
 
+    if((InputPort1 & BUTTON_B) && !(InputPort1Prev & BUTTON_B)) {
+        spawnBullet(entities[currentEntityId].x + 4, entities[currentEntityId].y + 8);
+    }
+
+    if(entities[currentEntityId].vy < 0 && entities[currentEntityId].y + entities[currentEntityId].vy > entities[currentEntityId].y) {
+        entities[currentEntityId].y = 0;
+        entities[currentEntityId].vy = 0;
+    }
+
+    if(entities[currentEntityId].y + entities[currentEntityId].vy > 218) {
+        entities[currentEntityId].y = 218;
+        entities[currentEntityId].vy = 0;
+    }
+
+    if(entities[currentEntityId].vx < 0 && entities[currentEntityId].x + entities[currentEntityId].vx > entities[currentEntityId].x) {
+        entities[currentEntityId].x = 0;
+        entities[currentEntityId].vx = 0;
+    }
+
+    if(entities[currentEntityId].x + entities[currentEntityId].vx > 240) {
+        entities[currentEntityId].x = 240;
+        entities[currentEntityId].vx = 0;
+    }
+
+
     entities[currentEntityId].x += entities[currentEntityId].vx;
     entities[currentEntityId].y += entities[currentEntityId].vy;
 
     // update player sprites
     drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, playerSpriteFrames[(FrameCount >> 3) & 0x01]);
-
-    if(entities[currentEntityId].y > 240) {
-        removeEntity(currentEntityId, &entityList);
-        pushEntity(currentEntityId, &freeEntityList);
-    }
 }
 
 /**
@@ -418,15 +484,6 @@ void main(void) {
     pushEntity(playerId, &entityList);
     entities[playerId].x = 64;
     entities[playerId].y = 128;
-    entities[playerId].vx = 0;
-    entities[playerId].vy = 0;
-    entities[playerId].health = 255;
-    entities[playerId].update = playerUpdate;
-
-    playerId = popEntity(&freeEntityList);
-    pushEntity(playerId, &entityList);
-    entities[playerId].x = playerId;
-    entities[playerId].y = 64;
     entities[playerId].vx = 0;
     entities[playerId].vy = 0;
     entities[playerId].health = 255;
@@ -475,6 +532,11 @@ void main(void) {
             uint8_t next = entities[currentEntityId].next;
             entities[currentEntityId].update();
             currentEntityId = next;
+        }
+
+        // clean up unused sprites
+        for(i = currentMetaSpriteId; i < 64; i++) {
+            sprites[i].y = 240;
         }
 
         // tells the NMI to update
