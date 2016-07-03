@@ -97,6 +97,9 @@ extern uint8_t VRAMUpdateReady;
 extern uint16_t Scroll;
 #pragma zpsym("Scroll");
 
+extern uint16_t BGDestAddr;
+#pragma zpsym("BGDestAddr");
+
 void UpdateInput();
 void WaitFrame(void);
 void __fastcall__ bankswitch(unsigned char bank);
@@ -183,7 +186,7 @@ void __fastcall__ copyBgLine(uint16_t line) {
         if(tile >= 32) {
             tileIdx += 0x10;
         }
-        PPU.vram.data = 0x02;//tileIdx;
+        PPU.vram.data = tileIdx;
     }
 }
 
@@ -426,27 +429,7 @@ void main(void) {
             if((Scroll & 0x0F) == 0 && mapCurrentLine > 0) {
                 --mapCurrentLine;
 
-                // copy new line to buffer
-                PPU.vram.address = Scroll > 240 ? 0x28 : 0x20;
-                PPU.vram.address = (Scroll >> 4) << 5;
-
-                /*
-                PPU.vram.data = 0x30 + (mapCurrentLine & 0x07);
-                PPU.vram.data = 0x30 + (mapCurrentLine & 0x07);
-                PPU.vram.data = 0x30 + (mapCurrentLine & 0x07);
-                PPU.vram.data = 0x30 + (mapCurrentLine & 0x07);
-                PPU.vram.data = 0x30 + (mapCurrentLine & 0x07);
-                PPU.vram.data = 0x30 + (mapCurrentLine & 0x07);
-                PPU.vram.data = 0x30 + (mapCurrentLine & 0x07);
-                PPU.vram.data = 0x30 + (mapCurrentLine & 0x07);
-                PPU.vram.data = 0x30 + (mapCurrentLine & 0x07);
-                PPU.vram.data = 0x30 + (mapCurrentLine & 0x07);
-                PPU.vram.data = 0x30 + (mapCurrentLine & 0x07);
-                PPU.vram.data = 0x30 + (mapCurrentLine & 0x07);
-                PPU.vram.data = 0x30 + (mapCurrentLine & 0x07);
-                PPU.vram.data = 0x30 + (mapCurrentLine & 0x07);
-                */
-                copyBgLine(mapCurrentLine);
+                BGDestAddr = ((Scroll > 240 ? 0x28 : 0x20) << 8) + (((Scroll & 0xFF) >> 4) << 5);
             }
 
             FrameCount = 0;

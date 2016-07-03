@@ -3,7 +3,7 @@
 .import _main
 .export __STARTUP__:absolute=1
 .export _WaitFrame
-.exportzp _FrameCount, _InputPort1, _InputPort1Prev, _InputPort2, _InputPort2Prev, _VRAMUpdateReady, _Scroll
+.exportzp _FrameCount, _InputPort1, _InputPort1Prev, _InputPort2, _InputPort2Prev, _VRAMUpdateReady, _Scroll, _BGDestAddr
 
 ; linker-generated symbols
 
@@ -35,6 +35,7 @@ _FrameCount:       .res 1
 frame_done:        .res 1
 _VRAMUpdateReady:  .res 1
 _Scroll:           .res 2
+_BGDestAddr:       .res 2
 
 ; Input handling
 _InputPort1:       .res 1
@@ -240,6 +241,18 @@ nmi:
     LDA #>(__OAM_LOAD__)
     STA OAM_DMA
 
+
+    LDA _BGDestAddr + 1
+    STA PPU_ADDR
+    LDA _BGDestAddr
+    STA PPU_ADDR
+
+    LDA #$30
+    LDX #64
+@bgLoop:
+    STA PPU_DATA
+    DEX
+    BNE @bgLoop    
 
 @postVRAMUpdate:
     ; clear VRAM ready flag
