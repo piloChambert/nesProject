@@ -7,8 +7,8 @@ cc65 -Oi %name%.c --add-source -t nes
 ca65 %name%.s
 ca65 reset.s
 
-ld65 -C %name%.cfg -o %name%.nes %name%.o reset.o nes.lib
+ld65 -C %name%.cfg -o Drakaina.nes %name%.o reset.o nes.lib
 
 del *.o
 
-fceux %name%.nes
+fceux Drakaina.nes
