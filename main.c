@@ -73,7 +73,7 @@ typedef struct _Entity {
     uint8_t health;
 
     // update function
-    void (*update)(void); 
+    uint8_t kind; // 0 = palyer, 1 = knight
 } Entity;
 
 extern uint8_t FrameCount;
@@ -116,6 +116,8 @@ uint8_t currentEntityId; // parameter for update func ptr
 uint8_t currentMetaSpriteId; // reset it to 0 at each frame!
 uint16_t mapCurrentLine;
 uint16_t timer;
+uint8_t scrollIncrement;
+uint8_t playerId;
 #pragma bss-name(pop)
 
 #pragma bss-name(push, "OAM")
@@ -257,9 +259,11 @@ void __fastcall__ drawSprite(uint8_t x, uint8_t y, uint8_t tile, uint8_t attr) {
     currentMetaSpriteId++;
 }
 
+#define BULLET_SPRITE 56
+uint8_t nextBullet = 0;
 
 // 16?
-#define ENTITY_COUNT 16
+#define ENTITY_COUNT 12
 Entity entities[ENTITY_COUNT]; 
 uint8_t freeEntityList = 0xFF;
 uint8_t entityList = 0xFF;
@@ -272,7 +276,7 @@ void initEntityList() {
         entities[i].y = 0;
         entities[i].vx = 0;
         entities[i].vy = 0;
-        entities[i].update = NULL;
+        entities[i].kind = 0xFF;
         entities[i].health = 0;
         entities[i].prev = i == 0? 0xFF : i - 1;
         entities[i].next = i == ENTITY_COUNT - 1 ? 0xFF : i + 1;
@@ -323,43 +327,57 @@ uint8_t popEntity(uint8_t *list) {
     return newId;
 }
 
-void bulletUpdate() {
-    entities[currentEntityId].x += entities[currentEntityId].vx;
-    entities[currentEntityId].y += entities[currentEntityId].vy;
+void __fastcall__ spawnBullet(uint8_t x, uint8_t y) {
+    if(sprites[BULLET_SPRITE + nextBullet].y > 240) {
+        sprites[BULLET_SPRITE + nextBullet].x = x;
+        sprites[BULLET_SPRITE + nextBullet].y = y;
+        sprites[BULLET_SPRITE + nextBullet].tile_index = 0x60;
+        sprites[BULLET_SPRITE + nextBullet].attributes = 0x02;
 
-    if(entities[currentEntityId].y + entities[currentEntityId].vy > entities[currentEntityId].y) {
+        nextBullet = (nextBullet + 1) & 0x7;
+    }
+}
+
+void knightUpdate() {
+    entities[currentEntityId].y += scrollIncrement;
+
+    if(entities[currentEntityId].x < entities[playerId].x)
+        entities[currentEntityId].x += 1;
+
+    if(entities[currentEntityId].x > entities[playerId].x)
+        entities[currentEntityId].x -= 1;
+
+
+    if(entities[currentEntityId].y > 240) {
         removeEntity(currentEntityId, &entityList);
         pushEntity(currentEntityId, &freeEntityList);
     }
 
-    // update player sprites
-    drawSprite(entities[currentEntityId].x, entities[currentEntityId].y, 0x60, 0x00);
+    drawSprite(entities[currentEntityId].x, entities[currentEntityId].y, 0x40, 0x01);
 }
 
-void __fastcall__ spawnBullet(uint8_t x, uint8_t y) {
-    static uint8_t id;
-    id = popEntity(&freeEntityList);
+void spawnKnight(uint8_t x, uint8_t y) {
+    uint8_t id = popEntity(&freeEntityList);
 
-    // if there's a free entity
     if(id != 0xFF) {
         pushEntity(id, &entityList);
         entities[id].x = x;
         entities[id].y = y;
         entities[id].vx = 0;
-        entities[id].vy = -4;
-        entities[id].health = 255;
-        entities[id].update = bulletUpdate;
+        entities[id].vy = 0;
+        entities[id].health = 4;
+        entities[id].kind = 1;
     }
 }
 
 void playerUpdate() {
     if(InputPort1 & BUTTON_UP) {
-        if (entities[currentEntityId].vy > -6) {
+        if (entities[currentEntityId].vy > -2) {
             entities[currentEntityId].vy -= 1;
         }
     }
     else if(InputPort1 & BUTTON_DOWN) {
-        if (entities[currentEntityId].vy < 6) {
+        if (entities[currentEntityId].vy < 2) {
             entities[currentEntityId].vy += 1;
         }
     } else if(entities[currentEntityId].vy > 2) {
@@ -371,11 +389,11 @@ void playerUpdate() {
     }
 
     if(InputPort1 & BUTTON_LEFT) {
-        if (entities[currentEntityId].vx > -6) {
+        if (entities[currentEntityId].vx > -2) {
             --entities[currentEntityId].vx;
         }
     } else if(InputPort1 & BUTTON_RIGHT) {
-        if (entities[currentEntityId].vx < 6) {
+        if (entities[currentEntityId].vx < 2) {
             ++entities[currentEntityId].vx;
         }
     } else if(entities[currentEntityId].vx > 2) {
@@ -412,8 +430,6 @@ void playerUpdate() {
 
     if((InputPort1 & BUTTON_B) && !(InputPort1Prev & BUTTON_B)) {
         spawnBullet(entities[currentEntityId].x, entities[currentEntityId].y - 8);
-        spawnBullet(entities[currentEntityId].x + 4, entities[currentEntityId].y - 8);
-        spawnBullet(entities[currentEntityId].x + 8, entities[currentEntityId].y - 8);
     }
 
     // update player sprites
@@ -440,11 +456,13 @@ void loadPalette(const uint8_t *pal) {
  * Unlike C programs on a computer, it takes no arguments and returns no value.
  */
 void main(void) {
-    uint8_t playerId;
-
-
     // reset APU
     APU.status = 0x0F;
+
+    // reset sprite
+    for(i = 0; i < 64; i++) {
+        sprites[i].y = 255;
+    }
 
 titleScreen:
     bankswitch(1);
@@ -509,7 +527,7 @@ gameState:
     entities[playerId].vx = 0;
     entities[playerId].vy = 0;
     entities[playerId].health = 255;
-    entities[playerId].update = playerUpdate;
+    entities[playerId].kind = 0;
 
     // tells the NMI to update
     VRAMUpdateReady = 1;
@@ -525,11 +543,14 @@ gameState:
         WaitFrame();
 
         currentMetaSpriteId = 0; // might be done in nmi?
+        scrollIncrement = 0;
 
         // Auto scroll
-        if(!(FrameCount & 0x00) && mapCurrentLine != 0xFFFF) { // stop when mapCurrentLine == -1
+        if(!(FrameCount & 0x01) && mapCurrentLine != 0xFFFF) { // stop when mapCurrentLine == -1
             if(Scroll > 0) {
                 --Scroll;
+
+                scrollIncrement = 1;
 
                 if(Scroll == 255) {
                     Scroll = 239;
@@ -543,18 +564,39 @@ gameState:
                 copyBgLine(map, mapCurrentLine);
                 BGDestAddr = (Scroll > 240 ? 0x2800 : 0x2000) + (((Scroll & 0xFF) >> 4) << 6);
             }
+
+            if((Scroll & 0x1F) == 0) {
+                spawnKnight(40, 16);
+            }
         }
 
         // update game entity
         currentEntityId = entityList;
         while(currentEntityId != 0xFF) {
             uint8_t next = entities[currentEntityId].next;
-            entities[currentEntityId].update();
+            switch(entities[currentEntityId].kind) {
+                case 0:
+                    playerUpdate();
+                    break;
+                case 1:
+                    knightUpdate();
+                    break;
+                default:
+                    // unknown kind
+                    break;
+            }
             currentEntityId = next;
         }
 
+        // update bullet
+        for(i = 0; i < 8; i++) {
+            if(sprites[BULLET_SPRITE + i].y < 240) {
+                sprites[BULLET_SPRITE + i].y -= 4; 
+            }
+        }
+
         // clean up unused sprites
-        for(i = currentMetaSpriteId; i < 64; i++) {
+        for(i = currentMetaSpriteId; i < BULLET_SPRITE; i++) {
             sprites[i].y = 240;
         }
 
