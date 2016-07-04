@@ -182,12 +182,12 @@ void fillBackground() {
 
 }
 
-const uint8_t playerSpriteFrames[2][17] = {
+const uint8_t playerSpriteFrames[][17] = {
     { // x, y, tile, attr
-        0, 0, 0x20, 0x00,
-        8, 0, 0x21, 0x00,
-        0, 8, 0x30, 0x00,
-        8, 8, 0x31, 0x00,
+        0, 0, 0x24, 0x00,
+        8, 0, 0x25, 0x00,
+        0, 8, 0x34, 0x00,
+        8, 8, 0x35, 0x00,
         127
     },
     { // x, y, tile, attr
@@ -198,6 +198,35 @@ const uint8_t playerSpriteFrames[2][17] = {
         127
     },
 
+    { // x, y, tile, attr
+        0, 0, 0x26, 0x00,
+        8, 0, 0x27, 0x00,
+        0, 8, 0x36, 0x00,
+        8, 8, 0x37, 0x00,
+        127
+    },
+    { // x, y, tile, attr
+        0, 0, 0x28, 0x00,
+        8, 0, 0x29, 0x00,
+        0, 8, 0x38, 0x00,
+        8, 8, 0x39, 0x00,
+        127
+    },
+
+    { // x, y, tile, attr
+        0, 0, 0x2A, 0x00,
+        8, 0, 0x2B, 0x00,
+        0, 8, 0x3A, 0x00,
+        8, 8, 0x3B, 0x00,
+        127
+    },
+    { // x, y, tile, attr
+        0, 0, 0x2C, 0x00,
+        8, 0, 0x2D, 0x00,
+        0, 8, 0x3C, 0x00,
+        8, 8, 0x3D, 0x00,
+        127
+    },
 };
 
 // return next id
@@ -246,7 +275,7 @@ void initEntityList() {
         entities[i].update = NULL;
         entities[i].health = 0;
         entities[i].prev = i == 0? 0xFF : i - 1;
-        entities[i].next = i == ENTITY_COUNT - 1 ? 0x0FF : i + 1;
+        entities[i].next = i == ENTITY_COUNT - 1 ? 0xFF : i + 1;
     }
 
     freeEntityList = 0;
@@ -277,6 +306,7 @@ void removeEntity(uint8_t id, uint8_t *list) {
         }
     } else {
         entities[entities[id].prev].next = entities[id].next;
+        entities[entities[id].next].prev = entities[id].prev;
     }
 
     entities[id].next = 0xFF;
@@ -287,7 +317,8 @@ void removeEntity(uint8_t id, uint8_t *list) {
 uint8_t popEntity(uint8_t *list) {
     uint8_t newId = *list;
 
-    removeEntity(newId, list);
+    if(newId != 0xFF)
+        removeEntity(newId, list);
 
     return newId;
 }
@@ -296,7 +327,7 @@ void bulletUpdate() {
     entities[currentEntityId].x += entities[currentEntityId].vx;
     entities[currentEntityId].y += entities[currentEntityId].vy;
 
-    if(entities[currentEntityId].vy < 0 && entities[currentEntityId].y + entities[currentEntityId].vy > entities[currentEntityId].y) {
+    if(entities[currentEntityId].y + entities[currentEntityId].vy > entities[currentEntityId].y) {
         removeEntity(currentEntityId, &entityList);
         pushEntity(currentEntityId, &freeEntityList);
     }
@@ -355,12 +386,8 @@ void playerUpdate() {
         entities[currentEntityId].vx = 0;
     }
 
-    if((InputPort1 & BUTTON_B) && !(InputPort1Prev & BUTTON_B)) {
-        spawnBullet(entities[currentEntityId].x + 4, entities[currentEntityId].y + 8);
-    }
-
-    if(entities[currentEntityId].vy < 0 && entities[currentEntityId].y + entities[currentEntityId].vy > entities[currentEntityId].y) {
-        entities[currentEntityId].y = 0;
+    if(entities[currentEntityId].vy < 0 && entities[currentEntityId].y + entities[currentEntityId].vy - 16 > entities[currentEntityId].y) {
+        entities[currentEntityId].y = 16;
         entities[currentEntityId].vy = 0;
     }
 
@@ -383,8 +410,20 @@ void playerUpdate() {
     entities[currentEntityId].x += entities[currentEntityId].vx;
     entities[currentEntityId].y += entities[currentEntityId].vy;
 
+    if((InputPort1 & BUTTON_B) && !(InputPort1Prev & BUTTON_B)) {
+        spawnBullet(entities[currentEntityId].x, entities[currentEntityId].y - 8);
+        spawnBullet(entities[currentEntityId].x + 4, entities[currentEntityId].y - 8);
+        spawnBullet(entities[currentEntityId].x + 8, entities[currentEntityId].y - 8);
+    }
+
     // update player sprites
-    drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, playerSpriteFrames[(FrameCount >> 3) & 0x01]);
+    if(entities[currentEntityId].vx > 2) {
+        drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, playerSpriteFrames[((FrameCount >> 3) & 0x01) + 4]);
+    } else if(entities[currentEntityId].vx < -2) {
+        drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, playerSpriteFrames[((FrameCount >> 3) & 0x01) + 2]);
+    } else {
+        drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, playerSpriteFrames[((FrameCount >> 3) & 0x01)]);
+    }
 }
 
 // load the palette data into PPU memory $3f00-$3f1f

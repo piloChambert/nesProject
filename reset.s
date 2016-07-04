@@ -333,7 +333,7 @@ irq:
 
 ; include CHR ROM data
 .segment "CHARS"
-.incbin "sprites.chr"
+.incbin "chrrom0.chr"
 .incbin "chrrom1.chr"
 .incbin "chrrom2.chr"
 .incbin "chrrom3.chr"
