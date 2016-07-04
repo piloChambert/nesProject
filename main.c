@@ -50,6 +50,10 @@
 #define BUTTON_B      0x40
 #define BUTTON_A      0x80
 
+#define BULLET_SPRITE 56
+#define ARROW_SPRITE 60
+#define ENTITY_COUNT 5
+
 typedef struct _Sprite {
     uint8_t y;          // y pixel coordinate
     uint8_t tile_index; // index into pattern table
@@ -119,6 +123,12 @@ uint16_t mapCurrentLine;
 uint16_t timer;
 uint8_t scrollIncrement;
 uint8_t playerId;
+Entity entities[ENTITY_COUNT];
+uint8_t nextBullet = 0;
+uint8_t nextArrow = 0;
+uint8_t freeEntityList = 0xFF;
+uint8_t entityList = 0xFF;
+uint8_t playerBlink;
 #pragma bss-name(pop)
 
 #pragma bss-name(push, "OAM")
@@ -185,65 +195,67 @@ void fillBackground() {
 
 }
 
-const uint8_t playerSpriteFrames[][17] = {
+const uint8_t gameOverText[] = {0xCA, 0xBA, 0xCB, 0xB7, 0x00, 0x00, 0xBD, 0xCC, 0xB7, 0xB6};
+
+const uint8_t playerSpriteFrames[][13] = {
     { // x, y, tile, attr
-        0, 0, 0x24, 0x00,
-        8, 0, 0x25, 0x00,
-        0, 8, 0x34, 0x00,
-        8, 8, 0x35, 0x00,
+        0, 0, 0x24,
+        8, 0, 0x25,
+        0, 8, 0x34,
+        8, 8, 0x35,
         127
     },
     { // x, y, tile, attr
-        0, 0, 0x22, 0x00,
-        8, 0, 0x23, 0x00,
-        0, 8, 0x32, 0x00,
-        8, 8, 0x33, 0x00,
+        0, 0, 0x22,
+        8, 0, 0x23,
+        0, 8, 0x32,
+        8, 8, 0x33,
         127
     },
 
     { // x, y, tile, attr
-        0, 0, 0x26, 0x00,
-        8, 0, 0x27, 0x00,
-        0, 8, 0x36, 0x00,
-        8, 8, 0x37, 0x00,
+        0, 0, 0x26,
+        8, 0, 0x27,
+        0, 8, 0x36,
+        8, 8, 0x37,
         127
     },
     { // x, y, tile, attr
-        0, 0, 0x28, 0x00,
-        8, 0, 0x29, 0x00,
-        0, 8, 0x38, 0x00,
-        8, 8, 0x39, 0x00,
+        0, 0, 0x28,
+        8, 0, 0x29,
+        0, 8, 0x38,
+        8, 8, 0x39,
         127
     },
 
     { // x, y, tile, attr
-        0, 0, 0x2A, 0x00,
-        8, 0, 0x2B, 0x00,
-        0, 8, 0x3A, 0x00,
-        8, 8, 0x3B, 0x00,
+        0, 0, 0x2A,
+        8, 0, 0x2B,
+        0, 8, 0x3A,
+        8, 8, 0x3B,
         127
     },
     { // x, y, tile, attr
-        0, 0, 0x2C, 0x00,
-        8, 0, 0x2D, 0x00,
-        0, 8, 0x3C, 0x00,
-        8, 8, 0x3D, 0x00,
+        0, 0, 0x2C,
+        8, 0, 0x2D,
+        0, 8, 0x3C,
+        8, 8, 0x3D,
         127
     },
 };
 
 // return next id
-void __fastcall__ drawMetaSprite(uint8_t x, uint8_t y, const uint8_t *data) {
+void __fastcall__ drawMetaSprite(uint8_t x, uint8_t y, uint8_t attr, const uint8_t *data) {
     // copy data at pos
     const uint8_t *ptr = data;
-    while(*ptr != 127) {
+    while(*ptr != 127 && currentMetaSpriteId != 0) {
         if(x + *ptr < 255) {
             sprites[currentMetaSpriteId].x = x + *(ptr++);
             sprites[currentMetaSpriteId].y = y + *(ptr++);
             sprites[currentMetaSpriteId].tile_index = *(ptr++);
-            sprites[currentMetaSpriteId].attributes = *(ptr++);
+            sprites[currentMetaSpriteId].attributes = attr;
 
-            currentMetaSpriteId++;
+            currentMetaSpriteId--;
         } else {
             ptr += 4; 
         }
@@ -251,24 +263,18 @@ void __fastcall__ drawMetaSprite(uint8_t x, uint8_t y, const uint8_t *data) {
 }
 
 void __fastcall__ drawSprite(uint8_t x, uint8_t y, uint8_t tile, uint8_t attr) {
+    // no more sprite
+    if(currentMetaSpriteId == 0)
+        return;
+
     // copy data at pos
     sprites[currentMetaSpriteId].x = x;
     sprites[currentMetaSpriteId].y = y;
     sprites[currentMetaSpriteId].tile_index = tile;
     sprites[currentMetaSpriteId].attributes = attr;
 
-    currentMetaSpriteId++;
+    currentMetaSpriteId--;
 }
-
-#define BULLET_SPRITE 56
-uint8_t nextBullet = 0;
-
-// 16?
-#define ENTITY_COUNT 8
-Entity entities[ENTITY_COUNT]; 
-uint8_t freeEntityList = 0xFF;
-uint8_t entityList = 0xFF;
-uint8_t missileList = 0xFF;
 
 // reset entity
 void initEntityList() {
@@ -285,7 +291,6 @@ void initEntityList() {
 
     freeEntityList = 0;
     entityList = 0xFF;
-    missileList = 0xFF;
 }
 
 // push an entity to the list
@@ -335,7 +340,18 @@ void __fastcall__ spawnBullet(uint8_t x, uint8_t y) {
         sprites[BULLET_SPRITE + nextBullet].tile_index = 0x60;
         sprites[BULLET_SPRITE + nextBullet].attributes = 0x02;
 
-        nextBullet = (nextBullet + 1) & 0x7;
+        nextBullet = (nextBullet + 1) & 0x3;
+    }
+}
+
+void __fastcall__ spawnArrow(uint8_t x, uint8_t y) {
+    if(sprites[ARROW_SPRITE + nextArrow].y > 240) {
+        sprites[ARROW_SPRITE + nextArrow].x = x;
+        sprites[ARROW_SPRITE + nextArrow].y = y;
+        sprites[ARROW_SPRITE + nextArrow].tile_index = 0x70;
+        sprites[ARROW_SPRITE + nextArrow].attributes = 0x01;
+
+        nextArrow = (nextArrow + 1) & 0x3;
     }
 }
 
@@ -347,7 +363,8 @@ void fireUpdate() {
         ++entities[currentEntityId].health;
     }
 
-    if(entities[currentEntityId].health == 16) {
+    // remove entity at end of animation
+    if(entities[currentEntityId].health == 16 || entities[currentEntityId].y > 240) {
         removeEntity(currentEntityId, &entityList);
         pushEntity(currentEntityId, &freeEntityList);            
     }
@@ -355,7 +372,7 @@ void fireUpdate() {
     drawSprite(entities[currentEntityId].x, entities[currentEntityId].y, 0xD0 + entities[currentEntityId].health, 0x02);
 }
 
-void knightUpdate() {
+void knightWalkUpdate() {
     entities[currentEntityId].y += scrollIncrement;
 
     if(!(FrameCount & 0x1)) {
@@ -372,8 +389,16 @@ void knightUpdate() {
         pushEntity(currentEntityId, &freeEntityList);
     }
 
+
+    --entities[currentEntityId].health;
+    if(entities[currentEntityId].health == 0) {
+        // stop and shoot
+        entities[currentEntityId].health = 64;
+        entities[currentEntityId].kind = 3;
+    }
+
     // test collision
-    for(i = 0; i < 8; i++) {
+    for(i = 0; i < 4; i++) {
         if(abs(sprites[BULLET_SPRITE + i].x - entities[currentEntityId].x) < 8 && abs(sprites[BULLET_SPRITE + i].y - entities[currentEntityId].y) < 8) {
             entities[currentEntityId].kind = 2;
             entities[currentEntityId].health = 0;
@@ -381,6 +406,34 @@ void knightUpdate() {
     }
 
     drawSprite(entities[currentEntityId].x, entities[currentEntityId].y, ((FrameCount >> 3) & 0x03) +  0x40, 0x01);
+}
+
+void knightShootUpdate() {
+    entities[currentEntityId].y += scrollIncrement;
+
+    --entities[currentEntityId].health;
+
+    // shoot arrow
+    if(entities[currentEntityId].health == 32) {
+        spawnArrow(entities[currentEntityId].x, entities[currentEntityId].y);
+    }
+
+    // and walk again
+    if(entities[currentEntityId].health == 0) {
+        entities[currentEntityId].health = 64;
+        entities[currentEntityId].kind = 1;
+    }
+
+    // test collision
+    for(i = 0; i < 4; i++) {
+        if(abs(sprites[BULLET_SPRITE + i].x - entities[currentEntityId].x) < 8 && abs(sprites[BULLET_SPRITE + i].y - entities[currentEntityId].y) < 8) {
+            entities[currentEntityId].kind = 2;
+            entities[currentEntityId].health = 0;
+            sprites[BULLET_SPRITE + i].y = 241;
+        }
+    }
+
+    drawSprite(entities[currentEntityId].x, entities[currentEntityId].y, 0x40, 0x01);
 }
 
 void spawnKnight(uint8_t x, uint8_t y) {
@@ -392,12 +445,14 @@ void spawnKnight(uint8_t x, uint8_t y) {
         entities[id].y = y;
         entities[id].vx = 0;
         entities[id].vy = 0;
-        entities[id].health = 4;
+        entities[id].health = 24;
         entities[id].kind = 1;
     }
 }
 
 void playerUpdate() {
+    static uint8_t pal;
+
     if(InputPort1 & BUTTON_UP) {
         if (entities[currentEntityId].vy > -2) {
             entities[currentEntityId].vy -= 1;
@@ -459,13 +514,36 @@ void playerUpdate() {
         spawnBullet(entities[currentEntityId].x + 4, entities[currentEntityId].y - 8);
     }
 
+    // test collision
+    for(i = 0; i < 4; i++) {
+        if(abs(sprites[ARROW_SPRITE + i].x - entities[currentEntityId].x) < 8 && abs(sprites[ARROW_SPRITE + i].y - entities[currentEntityId].y) < 8) {
+            --entities[currentEntityId].health;
+
+            sprites[ARROW_SPRITE + i].y = 241;
+
+            playerBlink = 255;
+
+            // Game over
+            if(entities[currentEntityId].health == 0) {
+                endLoop = 1; 
+            }
+        }
+    }
+
+    if((playerBlink & 0x3)) {
+        pal = 0x03;
+        --playerBlink;
+    } else {
+        pal = 0x00;
+    }
+
     // update player sprites
     if(entities[currentEntityId].vx > 2) {
-        drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, playerSpriteFrames[((FrameCount >> 3) & 0x01) + 4]);
+        drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, pal, playerSpriteFrames[((FrameCount >> 3) & 0x01) + 4]);
     } else if(entities[currentEntityId].vx < -2) {
-        drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, playerSpriteFrames[((FrameCount >> 3) & 0x01) + 2]);
+        drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, pal, playerSpriteFrames[((FrameCount >> 3) & 0x01) + 2]);
     } else {
-        drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, playerSpriteFrames[((FrameCount >> 3) & 0x01)]);
+        drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, pal, playerSpriteFrames[((FrameCount >> 3) & 0x01)]);
     }
 }
 
@@ -486,12 +564,12 @@ void main(void) {
     // reset APU
     APU.status = 0x0F;
 
+titleScreen:
     // reset sprite
     for(i = 0; i < 64; i++) {
         sprites[i].y = 255;
     }
 
-titleScreen:
     bankswitch(1);
     loadPalette(titlePalette);
 
@@ -503,6 +581,7 @@ titleScreen:
     // enable NMI and rendering
     PPU.control = PPUCTRL_NAMETABLE_0 | PPUCTRL_INC_1_HORIZ | PPUCTRL_BPATTERN_0 | PPUCTRL_SPATTERN_1 | PPUCTRL_NMI_ON;
 
+    endLoop = 0;
     while (!endLoop) {
         WaitFrame();
 
@@ -539,9 +618,8 @@ titleScreen:
     PPU.control = PPUCTRL_NAMETABLE_0 | PPUCTRL_INC_1_HORIZ | PPUCTRL_BPATTERN_0 | PPUCTRL_SPATTERN_1 | PPUCTRL_NMI_OFF;
     PPU.mask = 0;
 
-gameState:
+//gameState:
     bankswitch(0);
-
     loadPalette(mapPalette);
 
     initEntityList();
@@ -553,7 +631,7 @@ gameState:
     entities[playerId].y = 128;
     entities[playerId].vx = 0;
     entities[playerId].vy = 0;
-    entities[playerId].health = 255;
+    entities[playerId].health = 8;
     entities[playerId].kind = 0;
 
     // tells the NMI to update
@@ -564,16 +642,18 @@ gameState:
 
     Scroll = 0x108;
 
+    playerBlink = 0;
+
     // "infinite" loop
     endLoop = 0;
     while (!endLoop) {
         WaitFrame();
 
-        currentMetaSpriteId = 0; // might be done in nmi?
+        currentMetaSpriteId = BULLET_SPRITE - 1; // might be done in nmi?
         scrollIncrement = 0;
 
         // Auto scroll
-        if(!(FrameCount & 0x01) && mapCurrentLine != 0xFFFF) { // stop when mapCurrentLine == -1
+        if(!(FrameCount & 0x01)) { // stop when mapCurrentLine == -1
             if(Scroll > 0) {
                 --Scroll;
 
@@ -586,14 +666,19 @@ gameState:
                 Scroll = 256 + 239;
             }
 
-            if((Scroll & 0x0F) == 0x0F && mapCurrentLine != 0xFFFF) {
+            if((Scroll & 0x0F) == 0x0F) {
                 --mapCurrentLine;
+
+                if(mapCurrentLine == 0xFFFF) {
+                    mapCurrentLine = mapLineCount - 1;
+                }
+
                 copyBgLine(map, mapCurrentLine);
                 BGDestAddr = (Scroll > 240 ? 0x2800 : 0x2000) + (((Scroll & 0xFF) >> 4) << 6);
             }
 
-            if((Scroll & 0x1F) == 0) {
-                spawnKnight(40, 16);
+            if(!(Scroll & 0x1F)) {
+                spawnKnight(FrameCount, 0);
             }
         }
 
@@ -606,10 +691,13 @@ gameState:
                     playerUpdate();
                     break;
                 case 1:
-                    knightUpdate();
+                    knightWalkUpdate();
                     break;
                 case 2:
                     fireUpdate();
+                    break;
+                case 3:
+                    knightShootUpdate();
                     break;
 
                 default:
@@ -620,18 +708,105 @@ gameState:
         }
 
         // update bullet
-        for(i = 0; i < 8; i++) {
+        for(i = 0; i < 4; ++i) {
             if(sprites[BULLET_SPRITE + i].y < 240) {
                 sprites[BULLET_SPRITE + i].y -= 4; 
             }
         }
 
+        // update arrows 
+        for(i = 0; i < 4; ++i) {
+            if(sprites[ARROW_SPRITE + i].y <= 240) {
+                sprites[ARROW_SPRITE + i].y += 2; 
+            }
+        }
+
         // clean up unused sprites
-        for(i = currentMetaSpriteId; i < BULLET_SPRITE; i++) {
+        for(i = currentMetaSpriteId; i != 0; --i) {
             sprites[i].y = 240;
         }
 
         // tells the NMI to update
         VRAMUpdateReady = 1;
     }   
+
+    // wait an extra frame and disable rendering
+    Scroll = 0;
+    WaitFrame();
+    PPU.control = PPUCTRL_NAMETABLE_0 | PPUCTRL_INC_1_HORIZ | PPUCTRL_BPATTERN_0 | PPUCTRL_SPATTERN_1 | PPUCTRL_NMI_OFF;
+    PPU.mask = 0;
+
+//gameOverState:
+    // reset sprite
+    for(i = 0; i < 64; i++) {
+        sprites[i].y = 255;
+    }
+
+    bankswitch(1);
+    loadPalette(titlePalette);
+
+    // clear screen
+    PPU.vram.address = 0x20;
+    PPU.vram.address = 0x00;
+    for(i = 0; i < 32 * 30; i++) {
+        PPU.vram.data = 0x00;
+    }
+
+    PPU.vram.address = 0x28;
+    PPU.vram.address = 0x00;
+    for(i = 0; i < 32 * 30; i++) {
+        PPU.vram.data = 0x00;
+    }
+
+    // color
+    PPU.vram.address = 0x23;
+    PPU.vram.address = 0xC0;
+    for(i = 0; i < 64; i++) {
+        PPU.vram.data = 0xFF;
+    }
+
+    // write game over text
+    // best screen ever!
+    PPU.vram.address = 0x22;
+    PPU.vram.address = 0x0b;
+
+    for(i = 0; i < sizeof(gameOverText); i++) 
+        PPU.vram.data = gameOverText[i];
+
+
+    Scroll = 239;
+    timer = 0;
+    VRAMUpdateReady = 1;
+
+    // enable NMI and rendering
+    PPU.control = PPUCTRL_NAMETABLE_0 | PPUCTRL_INC_1_HORIZ | PPUCTRL_BPATTERN_0 | PPUCTRL_SPATTERN_1 | PPUCTRL_NMI_ON;
+
+    endLoop = 0;
+    while (!endLoop) {
+        WaitFrame();
+
+        if(timer > 32) {
+            if((InputPort1 & BUTTON_START) && !(InputPort1Prev & BUTTON_START)) {
+                endLoop = 1;
+            }
+        } else {
+            ++timer;
+            if(Scroll > 0) 
+                Scroll -= 16;
+
+            if(Scroll > 0x100)
+                Scroll = 0;
+
+        }
+
+        // tells the NMI to update
+        //VRAMUpdateReady = 1;
+    }
+
+    Scroll = 0;
+    WaitFrame();
+    PPU.control = PPUCTRL_NAMETABLE_0 | PPUCTRL_INC_1_HORIZ | PPUCTRL_BPATTERN_0 | PPUCTRL_SPATTERN_1 | PPUCTRL_NMI_OFF;
+    PPU.mask = 0;
+
+    goto titleScreen;
 };
