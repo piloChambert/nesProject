@@ -1,5 +1,6 @@
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <nes.h>
 
 // PPU_CTRL flags
@@ -73,7 +74,7 @@ typedef struct _Entity {
     uint8_t health;
 
     // update function
-    uint8_t kind; // 0 = palyer, 1 = knight
+    uint8_t kind; // 0 = palyer, 1 = knight, 2 = fire
 } Entity;
 
 extern uint8_t FrameCount;
@@ -263,7 +264,7 @@ void __fastcall__ drawSprite(uint8_t x, uint8_t y, uint8_t tile, uint8_t attr) {
 uint8_t nextBullet = 0;
 
 // 16?
-#define ENTITY_COUNT 12
+#define ENTITY_COUNT 8
 Entity entities[ENTITY_COUNT]; 
 uint8_t freeEntityList = 0xFF;
 uint8_t entityList = 0xFF;
@@ -338,14 +339,32 @@ void __fastcall__ spawnBullet(uint8_t x, uint8_t y) {
     }
 }
 
+void fireUpdate() {
+    entities[currentEntityId].y += scrollIncrement;
+
+
+    if(!(FrameCount & 0x03)) {
+        ++entities[currentEntityId].health;
+    }
+
+    if(entities[currentEntityId].health == 16) {
+        removeEntity(currentEntityId, &entityList);
+        pushEntity(currentEntityId, &freeEntityList);            
+    }
+
+    drawSprite(entities[currentEntityId].x, entities[currentEntityId].y, 0xD0 + entities[currentEntityId].health, 0x02);
+}
+
 void knightUpdate() {
     entities[currentEntityId].y += scrollIncrement;
 
-    if(entities[currentEntityId].x < entities[playerId].x)
-        entities[currentEntityId].x += 1;
+    if(!(FrameCount & 0x1)) {
+        if(entities[currentEntityId].x < entities[playerId].x + 8)
+            entities[currentEntityId].x += 1;
 
-    if(entities[currentEntityId].x > entities[playerId].x)
-        entities[currentEntityId].x -= 1;
+        if(entities[currentEntityId].x > entities[playerId].x + 8)
+            entities[currentEntityId].x -= 1;
+    }
 
 
     if(entities[currentEntityId].y > 240) {
@@ -353,7 +372,15 @@ void knightUpdate() {
         pushEntity(currentEntityId, &freeEntityList);
     }
 
-    drawSprite(entities[currentEntityId].x, entities[currentEntityId].y, 0x40, 0x01);
+    // test collision
+    for(i = 0; i < 8; i++) {
+        if(abs(sprites[BULLET_SPRITE + i].x - entities[currentEntityId].x) < 8 && abs(sprites[BULLET_SPRITE + i].y - entities[currentEntityId].y) < 8) {
+            entities[currentEntityId].kind = 2;
+            entities[currentEntityId].health = 0;
+        }
+    }
+
+    drawSprite(entities[currentEntityId].x, entities[currentEntityId].y, ((FrameCount >> 3) & 0x03) +  0x40, 0x01);
 }
 
 void spawnKnight(uint8_t x, uint8_t y) {
@@ -429,7 +456,7 @@ void playerUpdate() {
     entities[currentEntityId].y += entities[currentEntityId].vy;
 
     if((InputPort1 & BUTTON_B) && !(InputPort1Prev & BUTTON_B)) {
-        spawnBullet(entities[currentEntityId].x, entities[currentEntityId].y - 8);
+        spawnBullet(entities[currentEntityId].x + 4, entities[currentEntityId].y - 8);
     }
 
     // update player sprites
@@ -581,6 +608,10 @@ gameState:
                 case 1:
                     knightUpdate();
                     break;
+                case 2:
+                    fireUpdate();
+                    break;
+
                 default:
                     // unknown kind
                     break;

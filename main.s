@@ -11,6 +11,7 @@
 	.importzp	tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
 	.macpack	longbranch
 	.forceimport	__STARTUP__
+	.import		_abs
 	.importzp	_FrameCount
 	.importzp	_InputPort1
 	.importzp	_InputPort1Prev
@@ -58,6 +59,7 @@
 	.export		_removeEntity
 	.export		_popEntity
 	.export		_spawnBullet
+	.export		_fireUpdate
 	.export		_knightUpdate
 	.export		_spawnKnight
 	.export		_playerUpdate
@@ -6050,7 +6052,7 @@ _sprites:
 	.res	256,$00
 .segment	"BSS"
 _entities:
-	.res	96,$00
+	.res	64,$00
 
 ; ---------------------------------------------------------------
 ; void __near__ copyTitleScreen (void)
@@ -6151,7 +6153,7 @@ L0414:	sta     _i
 ;
 L040C:	ldx     #$00
 	lda     #$28
-L1A9F:	sta     _i
+L1AE7:	sta     _i
 	stx     _i+1
 	lda     _i+1
 	cmp     #$00
@@ -6171,15 +6173,15 @@ L041F:	bcs     L0419
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L1A9F
+	bcc     L1AE7
 	inx
-	jmp     L1A9F
+	jmp     L1AE7
 ;
 ; for(i = 48; i < 64; i++) {
 ;
 L0419:	ldx     #$00
 	lda     #$30
-L1AA0:	sta     _i
+L1AE8:	sta     _i
 	stx     _i+1
 	lda     _i+1
 	cmp     #$00
@@ -6199,9 +6201,9 @@ L042C:	bcs     L0426
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L1AA0
+	bcc     L1AE8
 	inx
-	jmp     L1AA0
+	jmp     L1AE8
 ;
 ; }
 ;
@@ -6239,7 +6241,7 @@ L1715:
 ; for(tile = 0; tile < 64; tile++) {
 ;
 	lda     #$00
-L1AA3:	sta     _tile
+L1AEB:	sta     _tile
 	cmp     #$40
 	bcs     L1719
 ;
@@ -6280,7 +6282,7 @@ L1AA3:	sta     _tile
 ;
 	lda     _tile
 	and     #$01
-	beq     L1AA2
+	beq     L1AEA
 ;
 ; ++tileIdx;
 ;
@@ -6288,7 +6290,7 @@ L1AA3:	sta     _tile
 ;
 ; if(tile >= 32) {
 ;
-L1AA2:	lda     _tile
+L1AEA:	lda     _tile
 	cmp     #$20
 	bcc     L1728
 ;
@@ -6319,7 +6321,7 @@ L172E:	sta     L1715
 	lda     _tile
 	clc
 	adc     #$01
-	jmp     L1AA3
+	jmp     L1AEB
 ;
 ; }
 ;
@@ -6432,10 +6434,10 @@ L1755:	bcs     L174F
 	ldx     _mapCurrentLine+1
 	clc
 	adc     #$0F
-	bcc     L1AA4
+	bcc     L1AEC
 	inx
 	clc
-L1AA4:	adc     _i
+L1AEC:	adc     _i
 	pha
 	txa
 	adc     _i+1
@@ -6858,7 +6860,7 @@ L181F:	lda     _i+1
 	cmp     #$00
 	bne     L1826
 	lda     _i
-	cmp     #$0C
+	cmp     #$08
 L1826:	jcs     L1820
 ;
 ; entities[i].x = 0;
@@ -6966,11 +6968,11 @@ L1826:	jcs     L1820
 	ora     _i+1
 	bne     L183F
 	lda     #$FF
-	jmp     L1AA5
+	jmp     L1AED
 L183F:	lda     _i
 	sec
 	sbc     #$01
-L1AA5:	ldy     #$00
+L1AED:	ldy     #$00
 	sta     (ptr1),y
 ;
 ; entities[i].next = i == ENTITY_COUNT - 1 ? 0xFF : i + 1;
@@ -6987,14 +6989,14 @@ L1AA5:	ldy     #$00
 	lda     _i+1
 	bne     L1848
 	lda     _i
-	cmp     #$0B
+	cmp     #$07
 	bne     L1848
 	lda     #$FF
-	jmp     L1AA6
+	jmp     L1AEE
 L1848:	lda     _i
 	clc
 	adc     #$01
-L1AA6:	iny
+L1AEE:	iny
 	sta     (ptr1),y
 ;
 ; for(i = 0; i < ENTITY_COUNT; i++) {
@@ -7149,7 +7151,7 @@ L1854:	iny
 	lda     (ptr1),y
 	ldy     #$02
 	cmp     (sp),y
-	bne     L1AB1
+	bne     L1AF9
 ;
 ; if(entities[id].next == 0xFF) {
 ;
@@ -7164,7 +7166,7 @@ L1854:	iny
 	dey
 	lda     (ptr1),y
 	cmp     #$FF
-	bne     L1AAF
+	bne     L1AF7
 ;
 ; *list = 0xFF; // empty list
 ;
@@ -7182,7 +7184,7 @@ L1854:	iny
 ;
 ; *list = entities[id].next;
 ;
-L1AAF:	lda     (sp),y
+L1AF7:	lda     (sp),y
 	sta     sreg+1
 	dey
 	lda     (sp),y
@@ -7228,7 +7230,7 @@ L1AAF:	lda     (sp),y
 ;
 ; entities[entities[id].prev].next = entities[id].next;
 ;
-L1AB1:	lda     (sp),y
+L1AF9:	lda     (sp),y
 	jsr     aslax3
 	sta     ptr1
 	txa
@@ -7364,7 +7366,7 @@ L1870:	ldy     #$02
 	ldx     #$00
 	lda     (sp,x)
 	cmp     #$FF
-	beq     L1AB3
+	beq     L1AFB
 ;
 ; removeEntity(newId, list);
 ;
@@ -7379,7 +7381,7 @@ L1870:	ldy     #$02
 ; return newId;
 ;
 	ldx     #$00
-L1AB3:	lda     (sp,x)
+L1AFB:	lda     (sp,x)
 ;
 ; }
 ;
@@ -7419,7 +7421,7 @@ L188D:	jsr     aslax2
 	ldy     #<(_sprites)
 	lda     (ptr1),y
 	cmp     #$F1
-	bcs     L1AB4
+	bcs     L1AFC
 ;
 ; }
 ;
@@ -7427,7 +7429,7 @@ L188D:	jsr     aslax2
 ;
 ; sprites[BULLET_SPRITE + nextBullet].x = x;
 ;
-L1AB4:	ldx     #$00
+L1AFC:	ldx     #$00
 	lda     _nextBullet
 	clc
 	adc     #$38
@@ -7517,6 +7519,141 @@ L189C:	jsr     aslax2
 .endproc
 
 ; ---------------------------------------------------------------
+; void __near__ fireUpdate (void)
+; ---------------------------------------------------------------
+
+.segment	"CODE"
+
+.proc	_fireUpdate: near
+
+.segment	"CODE"
+
+;
+; entities[currentEntityId].y += scrollIncrement;
+;
+	ldx     #$00
+	lda     _currentEntityId
+	jsr     aslax3
+	clc
+	adc     #<(_entities)
+	tay
+	txa
+	adc     #>(_entities)
+	tax
+	tya
+	jsr     pushax
+	sta     ptr1
+	stx     ptr1+1
+	ldy     #$03
+	lda     (ptr1),y
+	clc
+	adc     _scrollIncrement
+	jsr     staspidx
+;
+; if(!(FrameCount & 0x03)) {
+;
+	lda     _FrameCount
+	ldx     #$00
+	and     #$03
+	bne     L1AFE
+;
+; ++entities[currentEntityId].health;
+;
+	lda     _currentEntityId
+	jsr     aslax3
+	clc
+	adc     #<(_entities)
+	sta     ptr1
+	txa
+	adc     #>(_entities)
+	sta     ptr1+1
+	ldy     #$06
+	lda     #$01
+	clc
+	adc     (ptr1),y
+	sta     (ptr1),y
+;
+; if(entities[currentEntityId].health == 16) {
+;
+	ldx     #$00
+L1AFE:	lda     _currentEntityId
+	jsr     aslax3
+	clc
+	adc     #<(_entities)
+	sta     ptr1
+	txa
+	adc     #>(_entities)
+	sta     ptr1+1
+	ldy     #$06
+	lda     (ptr1),y
+	cmp     #$10
+	bne     L18AB
+;
+; removeEntity(currentEntityId, &entityList);
+;
+	lda     _currentEntityId
+	jsr     pusha
+	lda     #<(_entityList)
+	ldx     #>(_entityList)
+	jsr     _removeEntity
+;
+; pushEntity(currentEntityId, &freeEntityList);            
+;
+	lda     _currentEntityId
+	jsr     pusha
+	lda     #<(_freeEntityList)
+	ldx     #>(_freeEntityList)
+	jsr     _pushEntity
+;
+; drawSprite(entities[currentEntityId].x, entities[currentEntityId].y, 0xD0 + entities[currentEntityId].health, 0x02);
+;
+L18AB:	jsr     decsp3
+	ldx     #$00
+	lda     _currentEntityId
+	jsr     aslax3
+	clc
+	adc     #<(_entities)
+	sta     ptr1
+	txa
+	adc     #>(_entities)
+	sta     ptr1+1
+	ldy     #$02
+	lda     (ptr1),y
+	sta     (sp),y
+	ldx     #$00
+	lda     _currentEntityId
+	jsr     aslax3
+	clc
+	adc     #<(_entities)
+	sta     ptr1
+	txa
+	adc     #>(_entities)
+	sta     ptr1+1
+	iny
+	lda     (ptr1),y
+	ldy     #$01
+	sta     (sp),y
+	ldx     #$00
+	lda     _currentEntityId
+	jsr     aslax3
+	clc
+	adc     #<(_entities)
+	sta     ptr1
+	txa
+	adc     #>(_entities)
+	sta     ptr1+1
+	ldy     #$06
+	lda     (ptr1),y
+	clc
+	adc     #$D0
+	ldy     #$00
+	sta     (sp),y
+	lda     #$02
+	jmp     _drawSprite
+
+.endproc
+
+; ---------------------------------------------------------------
 ; void __near__ knightUpdate (void)
 ; ---------------------------------------------------------------
 
@@ -7548,9 +7685,15 @@ L189C:	jsr     aslax2
 	adc     _scrollIncrement
 	jsr     staspidx
 ;
-; if(entities[currentEntityId].x < entities[playerId].x)
+; if(!(FrameCount & 0x1)) {
 ;
+	lda     _FrameCount
 	ldx     #$00
+	and     #$01
+	jne     L1B00
+;
+; if(entities[currentEntityId].x < entities[playerId].x + 8)
+;
 	lda     _currentEntityId
 	jsr     aslax3
 	clc
@@ -7571,9 +7714,14 @@ L189C:	jsr     aslax2
 	adc     #>(_entities)
 	sta     ptr1+1
 	ldy     #$02
+	ldx     #$00
 	lda     (ptr1),y
-	jsr     tosicmp0
-	bcs     L18A6
+	clc
+	adc     #$08
+	bcc     L18C8
+	inx
+L18C8:	jsr     tosicmp
+	bcs     L18C4
 ;
 ; entities[currentEntityId].x += 1;
 ;
@@ -7592,9 +7740,9 @@ L189C:	jsr     aslax2
 	adc     #$01
 	sta     (ptr1),y
 ;
-; if(entities[currentEntityId].x > entities[playerId].x)
+; if(entities[currentEntityId].x > entities[playerId].x + 8)
 ;
-L18A6:	ldx     #$00
+L18C4:	ldx     #$00
 	lda     _currentEntityId
 	jsr     aslax3
 	clc
@@ -7615,10 +7763,15 @@ L18A6:	ldx     #$00
 	adc     #>(_entities)
 	sta     ptr1+1
 	ldy     #$02
+	ldx     #$00
 	lda     (ptr1),y
-	jsr     tosicmp0
-	bcc     L18AD
-	beq     L18AD
+	clc
+	adc     #$08
+	bcc     L18D0
+	inx
+L18D0:	jsr     tosicmp
+	bcc     L18CC
+	beq     L18CC
 ;
 ; entities[currentEntityId].x -= 1;
 ;
@@ -7639,8 +7792,8 @@ L18A6:	ldx     #$00
 ;
 ; if(entities[currentEntityId].y > 240) {
 ;
-L18AD:	ldx     #$00
-	lda     _currentEntityId
+L18CC:	ldx     #$00
+L1B00:	lda     _currentEntityId
 	jsr     aslax3
 	clc
 	adc     #<(_entities)
@@ -7651,7 +7804,8 @@ L18AD:	ldx     #$00
 	ldy     #$03
 	lda     (ptr1),y
 	cmp     #$F1
-	bcc     L18B4
+	lda     #$00
+	bcc     L1B02
 ;
 ; removeEntity(currentEntityId, &entityList);
 ;
@@ -7669,9 +7823,133 @@ L18AD:	ldx     #$00
 	ldx     #>(_freeEntityList)
 	jsr     _pushEntity
 ;
-; drawSprite(entities[currentEntityId].x, entities[currentEntityId].y, 0x40, 0x01);
+; for(i = 0; i < 8; i++) {
 ;
-L18B4:	jsr     decsp3
+	lda     #$00
+L1B02:	sta     _i
+	sta     _i+1
+L18DD:	lda     _i+1
+	cmp     #$00
+	bne     L18E4
+	lda     _i
+	cmp     #$08
+L18E4:	jcs     L18DE
+;
+; if(abs(sprites[BULLET_SPRITE + i].x - entities[currentEntityId].x) < 8 && abs(sprites[BULLET_SPRITE + i].y - entities[currentEntityId].y) < 8) {
+;
+	lda     _i
+	ldx     _i+1
+	clc
+	adc     #$38
+	bcc     L18EB
+	inx
+L18EB:	jsr     aslax2
+	clc
+	adc     #<(_sprites)
+	sta     ptr1
+	txa
+	adc     #>(_sprites)
+	sta     ptr1+1
+	ldy     #$03
+	lda     (ptr1),y
+	jsr     pusha0
+	lda     _currentEntityId
+	jsr     aslax3
+	clc
+	adc     #<(_entities)
+	sta     ptr1
+	txa
+	adc     #>(_entities)
+	sta     ptr1+1
+	ldy     #$02
+	lda     (ptr1),y
+	jsr     tossuba0
+	jsr     _abs
+	cmp     #$08
+	txa
+	sbc     #$00
+	bvc     L18ED
+	eor     #$80
+L18ED:	bpl     L18DF
+	lda     _i
+	ldx     _i+1
+	clc
+	adc     #$38
+	bcc     L18F1
+	inx
+L18F1:	jsr     aslax2
+	sta     ptr1
+	txa
+	clc
+	adc     #>(_sprites)
+	sta     ptr1+1
+	ldy     #<(_sprites)
+	lda     (ptr1),y
+	jsr     pusha0
+	lda     _currentEntityId
+	jsr     aslax3
+	clc
+	adc     #<(_entities)
+	sta     ptr1
+	txa
+	adc     #>(_entities)
+	sta     ptr1+1
+	ldy     #$03
+	lda     (ptr1),y
+	jsr     tossuba0
+	jsr     _abs
+	cmp     #$08
+	txa
+	sbc     #$00
+	bvc     L18F3
+	eor     #$80
+L18F3:	bpl     L18DF
+;
+; entities[currentEntityId].kind = 2;
+;
+	ldx     #$00
+	lda     _currentEntityId
+	jsr     aslax3
+	clc
+	adc     #<(_entities)
+	sta     ptr1
+	txa
+	adc     #>(_entities)
+	sta     ptr1+1
+	lda     #$02
+	ldy     #$07
+	sta     (ptr1),y
+;
+; entities[currentEntityId].health = 0;
+;
+	ldx     #$00
+	lda     _currentEntityId
+	jsr     aslax3
+	clc
+	adc     #<(_entities)
+	sta     ptr1
+	txa
+	adc     #>(_entities)
+	sta     ptr1+1
+	lda     #$00
+	dey
+	sta     (ptr1),y
+;
+; for(i = 0; i < 8; i++) {
+;
+L18DF:	lda     _i
+	ldx     _i+1
+	clc
+	adc     #$01
+	bcc     L18E6
+	inx
+L18E6:	sta     _i
+	stx     _i+1
+	jmp     L18DD
+;
+; drawSprite(entities[currentEntityId].x, entities[currentEntityId].y, ((FrameCount >> 3) & 0x03) +  0x40, 0x01);
+;
+L18DE:	jsr     decsp3
 	ldx     #$00
 	lda     _currentEntityId
 	jsr     aslax3
@@ -7697,7 +7975,13 @@ L18B4:	jsr     decsp3
 	lda     (ptr1),y
 	ldy     #$01
 	sta     (sp),y
-	lda     #$40
+	lda     _FrameCount
+	lsr     a
+	lsr     a
+	lsr     a
+	and     #$03
+	clc
+	adc     #$40
 	dey
 	sta     (sp),y
 	lda     #$01
@@ -7732,7 +8016,7 @@ L18B4:	jsr     decsp3
 	ldy     #$00
 	lda     (sp),y
 	cmp     #$FF
-	bne     L1AB6
+	bne     L1B06
 ;
 ; }
 ;
@@ -7740,7 +8024,7 @@ L18B4:	jsr     decsp3
 ;
 ; pushEntity(id, &entityList);
 ;
-L1AB6:	jsr     pusha
+L1B06:	jsr     pusha
 	lda     #<(_entityList)
 	ldx     #>(_entityList)
 	jsr     _pushEntity
@@ -7857,7 +8141,7 @@ L1AB6:	jsr     pusha
 ;
 	lda     _InputPort1
 	and     #$08
-	beq     L1AB8
+	beq     L1B08
 ;
 ; if (entities[currentEntityId].vy > -2) {
 ;
@@ -7875,9 +8159,9 @@ L1AB6:	jsr     pusha
 	jsr     ldaidx
 	sec
 	sbc     #$FF
-	bvs     L18E4
+	bvs     L1925
 	eor     #$80
-L18E4:	jpl     L1ABC
+L1925:	jpl     L1B0C
 ;
 ; entities[currentEntityId].vy -= 1;
 ;
@@ -7900,11 +8184,11 @@ L18E4:	jpl     L1ABC
 ;
 ; else if(InputPort1 & BUTTON_DOWN) {
 ;
-	jmp     L1ABC
-L1AB8:	lda     _InputPort1
+	jmp     L1B0C
+L1B08:	lda     _InputPort1
 	ldx     #$00
 	and     #$04
-	beq     L1AB9
+	beq     L1B09
 ;
 ; if (entities[currentEntityId].vy < 2) {
 ;
@@ -7921,9 +8205,9 @@ L1AB8:	lda     _InputPort1
 	jsr     ldaidx
 	sec
 	sbc     #$02
-	bvc     L18EE
+	bvc     L192F
 	eor     #$80
-L18EE:	jpl     L1ABC
+L192F:	jpl     L1B0C
 ;
 ; entities[currentEntityId].vy += 1;
 ;
@@ -7946,8 +8230,8 @@ L18EE:	jpl     L1ABC
 ;
 ; } else if(entities[currentEntityId].vy > 2) {
 ;
-	jmp     L1ABC
-L1AB9:	lda     _currentEntityId
+	jmp     L1B0C
+L1B09:	lda     _currentEntityId
 	jsr     aslax3
 	clc
 	adc     #<(_entities)
@@ -7960,11 +8244,11 @@ L1AB9:	lda     _currentEntityId
 	jsr     ldaidx
 	sec
 	sbc     #$03
-	bvs     L18F6
+	bvs     L1937
 	eor     #$80
-L18F6:	asl     a
+L1937:	asl     a
 	ldx     #$00
-	bcc     L1ABA
+	bcc     L1B0A
 ;
 ; entities[currentEntityId].vy -= 2;
 ;
@@ -7986,8 +8270,8 @@ L18F6:	asl     a
 ;
 ; } else if(entities[currentEntityId].vy < -2) {
 ;
-	jmp     L1ABC
-L1ABA:	lda     _currentEntityId
+	jmp     L1B0C
+L1B0A:	lda     _currentEntityId
 	jsr     aslax3
 	clc
 	adc     #<(_entities)
@@ -8000,11 +8284,11 @@ L1ABA:	lda     _currentEntityId
 	jsr     ldaidx
 	sec
 	sbc     #$FE
-	bvc     L18FE
+	bvc     L193F
 	eor     #$80
-L18FE:	asl     a
+L193F:	asl     a
 	ldx     #$00
-	bcc     L1ABB
+	bcc     L1B0B
 ;
 ; entities[currentEntityId].vy += 2;
 ;
@@ -8026,11 +8310,11 @@ L18FE:	asl     a
 ;
 ; } else {
 ;
-	jmp     L1ABC
+	jmp     L1B0C
 ;
 ; entities[currentEntityId].vy = 0;
 ;
-L1ABB:	lda     _currentEntityId
+L1B0B:	lda     _currentEntityId
 	jsr     aslax3
 	clc
 	adc     #<(_entities)
@@ -8043,9 +8327,9 @@ L1ABB:	lda     _currentEntityId
 ;
 ; if(InputPort1 & BUTTON_LEFT) {
 ;
-L1ABC:	lda     _InputPort1
+L1B0C:	lda     _InputPort1
 	and     #$02
-	beq     L1ABD
+	beq     L1B0D
 ;
 ; if (entities[currentEntityId].vx > -2) {
 ;
@@ -8063,11 +8347,11 @@ L1ABC:	lda     _InputPort1
 	jsr     ldaidx
 	sec
 	sbc     #$FF
-	bvs     L190B
+	bvs     L194C
 	eor     #$80
-L190B:	asl     a
+L194C:	asl     a
 	ldx     #$00
-	jcc     L1AC1
+	jcc     L1B11
 ;
 ; --entities[currentEntityId].vx;
 ;
@@ -8085,11 +8369,11 @@ L190B:	asl     a
 ;
 ; } else if(InputPort1 & BUTTON_RIGHT) {
 ;
-	jmp     L1AB7
-L1ABD:	lda     _InputPort1
+	jmp     L1B07
+L1B0D:	lda     _InputPort1
 	ldx     #$00
 	and     #$01
-	beq     L1ABE
+	beq     L1B0E
 ;
 ; if (entities[currentEntityId].vx < 2) {
 ;
@@ -8106,11 +8390,11 @@ L1ABD:	lda     _InputPort1
 	jsr     ldaidx
 	sec
 	sbc     #$02
-	bvc     L1914
+	bvc     L1955
 	eor     #$80
-L1914:	asl     a
+L1955:	asl     a
 	ldx     #$00
-	jcc     L1AC1
+	jcc     L1B11
 ;
 ; ++entities[currentEntityId].vx;
 ;
@@ -8128,8 +8412,8 @@ L1914:	asl     a
 ;
 ; } else if(entities[currentEntityId].vx > 2) {
 ;
-	jmp     L1AB7
-L1ABE:	lda     _currentEntityId
+	jmp     L1B07
+L1B0E:	lda     _currentEntityId
 	jsr     aslax3
 	clc
 	adc     #<(_entities)
@@ -8142,11 +8426,11 @@ L1ABE:	lda     _currentEntityId
 	jsr     ldaidx
 	sec
 	sbc     #$03
-	bvs     L191B
+	bvs     L195C
 	eor     #$80
-L191B:	asl     a
+L195C:	asl     a
 	ldx     #$00
-	bcc     L1ABF
+	bcc     L1B0F
 ;
 ; entities[currentEntityId].vx -= 2;
 ;
@@ -8168,8 +8452,8 @@ L191B:	asl     a
 ;
 ; } else if(entities[currentEntityId].vx < -2) {
 ;
-	jmp     L1927
-L1ABF:	lda     _currentEntityId
+	jmp     L1968
+L1B0F:	lda     _currentEntityId
 	jsr     aslax3
 	clc
 	adc     #<(_entities)
@@ -8182,11 +8466,11 @@ L1ABF:	lda     _currentEntityId
 	jsr     ldaidx
 	sec
 	sbc     #$FE
-	bvc     L1923
+	bvc     L1964
 	eor     #$80
-L1923:	asl     a
+L1964:	asl     a
 	ldx     #$00
-	bcc     L1AC0
+	bcc     L1B10
 ;
 ; entities[currentEntityId].vx += 2;
 ;
@@ -8208,11 +8492,11 @@ L1923:	asl     a
 ;
 ; } else {
 ;
-	jmp     L1927
+	jmp     L1968
 ;
 ; entities[currentEntityId].vx = 0;
 ;
-L1AC0:	lda     _currentEntityId
+L1B10:	lda     _currentEntityId
 	jsr     aslax3
 	clc
 	adc     #<(_entities)
@@ -8221,12 +8505,12 @@ L1AC0:	lda     _currentEntityId
 	adc     #>(_entities)
 	sta     ptr1+1
 	lda     #$00
-L1AB7:	sta     (ptr1),y
+L1B07:	sta     (ptr1),y
 ;
 ; if(entities[currentEntityId].vy < 0 && entities[currentEntityId].y + entities[currentEntityId].vy - 16 > entities[currentEntityId].y) {
 ;
-L1927:	ldx     #$00
-L1AC1:	lda     _currentEntityId
+L1968:	ldx     #$00
+L1B11:	lda     _currentEntityId
 	jsr     aslax3
 	clc
 	adc     #<(_entities)
@@ -8239,7 +8523,7 @@ L1AC1:	lda     _currentEntityId
 	jsr     ldaidx
 	asl     a
 	ldx     #$00
-	jcc     L1AC4
+	jcc     L1B14
 	lda     _currentEntityId
 	jsr     aslax3
 	clc
@@ -8265,9 +8549,9 @@ L1AC1:	lda     _currentEntityId
 	jsr     tosaddax
 	sec
 	sbc     #$10
-	bcs     L1931
+	bcs     L1972
 	dex
-L1931:	jsr     pushax
+L1972:	jsr     pushax
 	ldx     #$00
 	lda     _currentEntityId
 	jsr     aslax3
@@ -8280,8 +8564,8 @@ L1931:	jsr     pushax
 	ldy     #$03
 	lda     (ptr1),y
 	jsr     tosicmp0
-	beq     L1ACF
-	bcc     L1ACF
+	beq     L1B1F
+	bcc     L1B1F
 ;
 ; entities[currentEntityId].y = 16;
 ;
@@ -8315,8 +8599,8 @@ L1931:	jsr     pushax
 ;
 ; if(entities[currentEntityId].y + entities[currentEntityId].vy > 218) {
 ;
-L1ACF:	ldx     #$00
-L1AC4:	lda     _currentEntityId
+L1B1F:	ldx     #$00
+L1B14:	lda     _currentEntityId
 	jsr     aslax3
 	clc
 	adc     #<(_entities)
@@ -8343,7 +8627,7 @@ L1AC4:	lda     _currentEntityId
 	txa
 	sbc     #$00
 	ldx     #$00
-	bcc     L1AC5
+	bcc     L1B15
 ;
 ; entities[currentEntityId].y = 218;
 ;
@@ -8377,7 +8661,7 @@ L1AC4:	lda     _currentEntityId
 ; if(entities[currentEntityId].vx < 0 && entities[currentEntityId].x + entities[currentEntityId].vx > entities[currentEntityId].x) {
 ;
 	tax
-L1AC5:	lda     _currentEntityId
+L1B15:	lda     _currentEntityId
 	jsr     aslax3
 	clc
 	adc     #<(_entities)
@@ -8390,7 +8674,7 @@ L1AC5:	lda     _currentEntityId
 	jsr     ldaidx
 	asl     a
 	ldx     #$00
-	jcc     L1AC8
+	jcc     L1B18
 	lda     _currentEntityId
 	jsr     aslax3
 	clc
@@ -8427,8 +8711,8 @@ L1AC5:	lda     _currentEntityId
 	ldy     #$02
 	lda     (ptr1),y
 	jsr     tosicmp0
-	beq     L1AD0
-	bcc     L1AD0
+	beq     L1B20
+	bcc     L1B20
 ;
 ; entities[currentEntityId].x = 0;
 ;
@@ -8462,8 +8746,8 @@ L1AC5:	lda     _currentEntityId
 ;
 ; if(entities[currentEntityId].x + entities[currentEntityId].vx > 240) {
 ;
-L1AD0:	ldx     #$00
-L1AC8:	lda     _currentEntityId
+L1B20:	ldx     #$00
+L1B18:	lda     _currentEntityId
 	jsr     aslax3
 	clc
 	adc     #<(_entities)
@@ -8490,7 +8774,7 @@ L1AC8:	lda     _currentEntityId
 	txa
 	sbc     #$00
 	ldx     #$00
-	bcc     L1AC9
+	bcc     L1B19
 ;
 ; entities[currentEntityId].x = 240;
 ;
@@ -8524,7 +8808,7 @@ L1AC8:	lda     _currentEntityId
 ; entities[currentEntityId].x += entities[currentEntityId].vx;
 ;
 	tax
-L1AC9:	lda     _currentEntityId
+L1B19:	lda     _currentEntityId
 	jsr     aslax3
 	clc
 	adc     #<(_entities)
@@ -8592,12 +8876,12 @@ L1AC9:	lda     _currentEntityId
 	lda     _InputPort1
 	ldx     #$00
 	and     #$40
-	beq     L1ACD
+	beq     L1B1D
 	lda     _InputPort1Prev
 	and     #$40
-	bne     L1ACD
+	bne     L1B1D
 ;
-; spawnBullet(entities[currentEntityId].x, entities[currentEntityId].y - 8);
+; spawnBullet(entities[currentEntityId].x + 4, entities[currentEntityId].y - 8);
 ;
 	lda     _currentEntityId
 	jsr     aslax3
@@ -8609,6 +8893,8 @@ L1AC9:	lda     _currentEntityId
 	sta     ptr1+1
 	ldy     #$02
 	lda     (ptr1),y
+	clc
+	adc     #$04
 	jsr     pusha
 	ldx     #$00
 	lda     _currentEntityId
@@ -8628,7 +8914,7 @@ L1AC9:	lda     _currentEntityId
 ; if(entities[currentEntityId].vx > 2) {
 ;
 	ldx     #$00
-L1ACD:	lda     _currentEntityId
+L1B1D:	lda     _currentEntityId
 	jsr     aslax3
 	clc
 	adc     #<(_entities)
@@ -8641,11 +8927,11 @@ L1ACD:	lda     _currentEntityId
 	jsr     ldaidx
 	sec
 	sbc     #$03
-	bvs     L1973
+	bvs     L19B5
 	eor     #$80
-L1973:	asl     a
+L19B5:	asl     a
 	ldx     #$00
-	bcc     L1ACE
+	bcc     L1B1E
 ;
 ; drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, playerSpriteFrames[((FrameCount >> 3) & 0x01) + 4]);
 ;
@@ -8683,9 +8969,9 @@ L1973:	asl     a
 	and     #$01
 	clc
 	adc     #$04
-	bcc     L197D
+	bcc     L19BF
 	inx
-L197D:	jsr     pushax
+L19BF:	jsr     pushax
 	lda     #$11
 	jsr     tosmula0
 	clc
@@ -8699,7 +8985,7 @@ L197D:	jsr     pushax
 ;
 ; } else if(entities[currentEntityId].vx < -2) {
 ;
-L1ACE:	lda     _currentEntityId
+L1B1E:	lda     _currentEntityId
 	jsr     aslax3
 	clc
 	adc     #<(_entities)
@@ -8712,9 +8998,9 @@ L1ACE:	lda     _currentEntityId
 	jsr     ldaidx
 	sec
 	sbc     #$FE
-	bvc     L1982
+	bvc     L19C4
 	eor     #$80
-L1982:	bpl     L197F
+L19C4:	bpl     L19C1
 ;
 ; drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, playerSpriteFrames[((FrameCount >> 3) & 0x01) + 2]);
 ;
@@ -8753,9 +9039,9 @@ L1982:	bpl     L197F
 	and     #$01
 	clc
 	adc     #$02
-	bcc     L198C
+	bcc     L19CE
 	inx
-L198C:	jsr     pushax
+L19CE:	jsr     pushax
 	lda     #$11
 	jsr     tosmula0
 	clc
@@ -8769,7 +9055,7 @@ L198C:	jsr     pushax
 ;
 ; drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, playerSpriteFrames[((FrameCount >> 3) & 0x01)]);
 ;
-L197F:	jsr     decsp2
+L19C1:	jsr     decsp2
 	ldx     #$00
 	lda     _currentEntityId
 	jsr     aslax3
@@ -8844,12 +9130,12 @@ L197F:	jsr     decsp2
 ;
 	sta     _i
 	sta     _i+1
-L199E:	lda     _i+1
+L19E0:	lda     _i+1
 	cmp     #$00
-	bne     L19A5
+	bne     L19E7
 	lda     _i
 	cmp     #$20
-L19A5:	bcs     L199F
+L19E7:	bcs     L19E1
 ;
 ; PPU.vram.data = pal[i];
 ;
@@ -8870,13 +9156,13 @@ L19A5:	bcs     L199F
 ; for ( i = 0; i < 32; ++i ) {
 ;
 	inc     _i
-	bne     L199E
+	bne     L19E0
 	inc     _i+1
-	jmp     L199E
+	jmp     L19E0
 ;
 ; }
 ;
-L199F:	jmp     incsp2
+L19E1:	jmp     incsp2
 
 .endproc
 
@@ -8901,12 +9187,12 @@ L199F:	jmp     incsp2
 	lda     #$00
 	sta     _i
 	sta     _i+1
-L19B0:	lda     _i+1
+L19F2:	lda     _i+1
 	cmp     #$00
-	bne     L19B7
+	bne     L19F9
 	lda     _i
 	cmp     #$40
-L19B7:	bcs     L19B1
+L19F9:	bcs     L19F3
 ;
 ; sprites[i].y = 255;
 ;
@@ -8929,15 +9215,15 @@ L19B7:	bcs     L19B1
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L19B9
+	bcc     L19FB
 	inx
-L19B9:	sta     _i
+L19FB:	sta     _i
 	stx     _i+1
-	jmp     L19B0
+	jmp     L19F2
 ;
 ; bankswitch(1);
 ;
-L19B1:	lda     #$01
+L19F3:	lda     #$01
 	jsr     _bankswitch
 ;
 ; loadPalette(titlePalette);
@@ -8975,11 +9261,11 @@ L19B1:	lda     #$01
 ;
 ; while (!endLoop) {
 ;
-	jmp     L19CE
+	jmp     L1A10
 ;
 ; WaitFrame();
 ;
-L19CC:	jsr     _WaitFrame
+L1A0E:	jsr     _WaitFrame
 ;
 ; if(timer > 32) {
 ;
@@ -8987,7 +9273,7 @@ L19CC:	jsr     _WaitFrame
 	cmp     #$21
 	lda     _timer+1
 	sbc     #$00
-	bcc     L19D1
+	bcc     L1A13
 ;
 ; Scroll = 0;
 ;
@@ -9032,10 +9318,10 @@ L19CC:	jsr     _WaitFrame
 ;
 	lda     _InputPort1
 	and     #$10
-	beq     L19CE
+	beq     L1A10
 	lda     _InputPort1Prev
 	and     #$10
-	bne     L19CE
+	bne     L1A10
 ;
 ; endLoop = 1;
 ;
@@ -9044,19 +9330,19 @@ L19CC:	jsr     _WaitFrame
 ;
 ; } else {
 ;
-	jmp     L19CE
+	jmp     L1A10
 ;
 ; ++timer;
 ;
-L19D1:	inc     _timer
-	bne     L19F2
+L1A13:	inc     _timer
+	bne     L1A34
 	inc     _timer+1
 ;
 ; if(Scroll > 0) 
 ;
-L19F2:	lda     _Scroll
+L1A34:	lda     _Scroll
 	ora     _Scroll+1
-	beq     L19F3
+	beq     L1A35
 ;
 ; Scroll -= 16;
 ;
@@ -9064,16 +9350,16 @@ L19F2:	lda     _Scroll
 	sec
 	sbc     #$10
 	sta     _Scroll
-	bcs     L19F3
+	bcs     L1A35
 	dec     _Scroll+1
 ;
 ; if(Scroll > 0x100)
 ;
-L19F3:	lda     _Scroll
+L1A35:	lda     _Scroll
 	cmp     #$01
 	lda     _Scroll+1
 	sbc     #$01
-	bcc     L19CE
+	bcc     L1A10
 ;
 ; Scroll = 0;
 ;
@@ -9083,8 +9369,8 @@ L19F3:	lda     _Scroll
 ;
 ; while (!endLoop) {
 ;
-L19CE:	lda     _endLoop
-	jeq     L19CC
+L1A10:	lda     _endLoop
+	jeq     L1A0E
 ;
 ; WaitFrame();
 ;
@@ -9246,11 +9532,11 @@ L19CE:	lda     _endLoop
 ;
 ; while (!endLoop) {
 ;
-	jmp     L1A2E
+	jmp     L1A70
 ;
 ; WaitFrame();
 ;
-L1A2C:	jsr     _WaitFrame
+L1A6E:	jsr     _WaitFrame
 ;
 ; currentMetaSpriteId = 0; // might be done in nmi?
 ;
@@ -9266,19 +9552,19 @@ L1A2C:	jsr     _WaitFrame
 	lda     _FrameCount
 	ldx     #$00
 	and     #$01
-	jne     L1ADB
+	jne     L1B2B
 	lda     _mapCurrentLine+1
 	cmp     #$FF
-	bne     L1AD7
+	bne     L1B27
 	lda     _mapCurrentLine
 	cmp     #$FF
-	jeq     L1ADB
+	jeq     L1B2B
 ;
 ; if(Scroll > 0) {
 ;
-L1AD7:	lda     _Scroll
+L1B27:	lda     _Scroll
 	ora     _Scroll+1
-	beq     L1A3B
+	beq     L1A7D
 ;
 ; --Scroll;
 ;
@@ -9286,58 +9572,58 @@ L1AD7:	lda     _Scroll
 	sec
 	sbc     #$01
 	sta     _Scroll
-	bcs     L1A3F
+	bcs     L1A81
 	dec     _Scroll+1
 ;
 ; scrollIncrement = 1;
 ;
-L1A3F:	lda     #$01
+L1A81:	lda     #$01
 	sta     _scrollIncrement
 ;
 ; if(Scroll == 255) {
 ;
 	lda     _Scroll+1
-	bne     L1A47
+	bne     L1A89
 	lda     _Scroll
 	cmp     #$FF
-	bne     L1A47
+	bne     L1A89
 ;
 ; } else {
 ;
-	jmp     L1ADF
+	jmp     L1B2F
 ;
 ; Scroll = 256 + 239;
 ;
-L1A3B:	inx
-L1ADF:	lda     #$EF
+L1A7D:	inx
+L1B2F:	lda     #$EF
 	sta     _Scroll
 	stx     _Scroll+1
 ;
 ; if((Scroll & 0x0F) == 0x0F && mapCurrentLine != 0xFFFF) {
 ;
-L1A47:	lda     _Scroll
+L1A89:	lda     _Scroll
 	and     #$0F
 	cmp     #$0F
-	bne     L1A4A
+	bne     L1A8C
 	lda     _mapCurrentLine+1
 	cmp     #$FF
-	bne     L1AD9
+	bne     L1B29
 	lda     _mapCurrentLine
 	cmp     #$FF
-	beq     L1A4A
+	beq     L1A8C
 ;
 ; --mapCurrentLine;
 ;
-L1AD9:	lda     _mapCurrentLine
+L1B29:	lda     _mapCurrentLine
 	sec
 	sbc     #$01
 	sta     _mapCurrentLine
-	bcs     L1A52
+	bcs     L1A94
 	dec     _mapCurrentLine+1
 ;
 ; copyBgLine(map, mapCurrentLine);
 ;
-L1A52:	lda     #<(_map)
+L1A94:	lda     #<(_map)
 	ldx     #>(_map)
 	jsr     pushax
 	lda     _mapCurrentLine
@@ -9351,11 +9637,11 @@ L1A52:	lda     #<(_map)
 	lda     _Scroll+1
 	sbc     #$00
 	lda     #$00
-	bcc     L1A59
+	bcc     L1A9B
 	ldx     #$28
-	jmp     L1ADA
-L1A59:	ldx     #$20
-L1ADA:	sta     ptr1
+	jmp     L1B2A
+L1A9B:	ldx     #$20
+L1B2A:	sta     ptr1
 	stx     ptr1+1
 	lda     _Scroll
 	ldx     #$00
@@ -9374,10 +9660,10 @@ L1ADA:	sta     ptr1
 ;
 ; if((Scroll & 0x1F) == 0) {
 ;
-L1A4A:	lda     _Scroll
+L1A8C:	lda     _Scroll
 	ldx     #$00
 	and     #$1F
-	bne     L1ADB
+	bne     L1B2B
 ;
 ; spawnKnight(40, 16);
 ;
@@ -9389,16 +9675,16 @@ L1A4A:	lda     _Scroll
 ; currentEntityId = entityList;
 ;
 	ldx     #$00
-L1ADB:	lda     _entityList
+L1B2B:	lda     _entityList
 	sta     _currentEntityId
 ;
 ; while(currentEntityId != 0xFF) {
 ;
-	jmp     L1ADD
+	jmp     L1B2D
 ;
 ; uint8_t next = entities[currentEntityId].next;
 ;
-L1ADC:	lda     _currentEntityId
+L1B2C:	lda     _currentEntityId
 	jsr     aslax3
 	clc
 	adc     #<(_entities)
@@ -9426,26 +9712,36 @@ L1ADC:	lda     _currentEntityId
 ;
 ; }
 ;
-	beq     L1A74
+	beq     L1AB6
 	cmp     #$01
-	beq     L1A77
-	jmp     L1A72
+	beq     L1AB9
+	cmp     #$02
+	beq     L1ABC
+	jmp     L1AB4
 ;
 ; playerUpdate();
 ;
-L1A74:	jsr     _playerUpdate
+L1AB6:	jsr     _playerUpdate
 ;
 ; break;
 ;
-	jmp     L1A72
+	jmp     L1AB4
 ;
 ; knightUpdate();
 ;
-L1A77:	jsr     _knightUpdate
+L1AB9:	jsr     _knightUpdate
+;
+; break;
+;
+	jmp     L1AB4
+;
+; fireUpdate();
+;
+L1ABC:	jsr     _fireUpdate
 ;
 ; currentEntityId = next;
 ;
-L1A72:	ldy     #$00
+L1AB4:	ldy     #$00
 	lda     (sp),y
 	sta     _currentEntityId
 ;
@@ -9456,21 +9752,21 @@ L1A72:	ldy     #$00
 ; while(currentEntityId != 0xFF) {
 ;
 	ldx     #$00
-L1ADD:	lda     _currentEntityId
+L1B2D:	lda     _currentEntityId
 	cmp     #$FF
-	bne     L1ADC
+	bne     L1B2C
 ;
 ; for(i = 0; i < 8; i++) {
 ;
 	txa
 	sta     _i
 	sta     _i+1
-L1A7C:	lda     _i+1
+L1AC1:	lda     _i+1
 	cmp     #$00
-	bne     L1A83
+	bne     L1AC8
 	lda     _i
 	cmp     #$08
-L1A83:	bcs     L1A7D
+L1AC8:	bcs     L1AC2
 ;
 ; if(sprites[BULLET_SPRITE + i].y < 240) {
 ;
@@ -9478,9 +9774,9 @@ L1A83:	bcs     L1A7D
 	ldx     _i+1
 	clc
 	adc     #$38
-	bcc     L1A89
+	bcc     L1ACE
 	inx
-L1A89:	jsr     aslax2
+L1ACE:	jsr     aslax2
 	sta     ptr1
 	txa
 	clc
@@ -9489,7 +9785,7 @@ L1A89:	jsr     aslax2
 	ldy     #<(_sprites)
 	lda     (ptr1),y
 	cmp     #$F0
-	bcs     L1A7E
+	bcs     L1AC3
 ;
 ; sprites[BULLET_SPRITE + i].y -= 4; 
 ;
@@ -9497,9 +9793,9 @@ L1A89:	jsr     aslax2
 	ldx     _i+1
 	clc
 	adc     #$38
-	bcc     L1A8C
+	bcc     L1AD1
 	inx
-L1A8C:	jsr     aslax2
+L1AD1:	jsr     aslax2
 	clc
 	adc     #<(_sprites)
 	sta     ptr1
@@ -9514,28 +9810,28 @@ L1A8C:	jsr     aslax2
 ;
 ; for(i = 0; i < 8; i++) {
 ;
-L1A7E:	lda     _i
+L1AC3:	lda     _i
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L1A85
+	bcc     L1ACA
 	inx
-L1A85:	sta     _i
+L1ACA:	sta     _i
 	stx     _i+1
-	jmp     L1A7C
+	jmp     L1AC1
 ;
 ; for(i = currentMetaSpriteId; i < BULLET_SPRITE; i++) {
 ;
-L1A7D:	lda     _currentMetaSpriteId
+L1AC2:	lda     _currentMetaSpriteId
 	sta     _i
 	lda     #$00
 	sta     _i+1
-L1A8E:	lda     _i+1
+L1AD3:	lda     _i+1
 	cmp     #$00
-	bne     L1A95
+	bne     L1ADA
 	lda     _i
 	cmp     #$38
-L1A95:	bcs     L1A8F
+L1ADA:	bcs     L1AD4
 ;
 ; sprites[i].y = 240;
 ;
@@ -9558,21 +9854,26 @@ L1A95:	bcs     L1A8F
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L1A97
+	bcc     L1ADC
 	inx
-L1A97:	sta     _i
+L1ADC:	sta     _i
 	stx     _i+1
-	jmp     L1A8E
+	jmp     L1AD3
 ;
 ; VRAMUpdateReady = 1;
 ;
-L1A8F:	lda     #$01
+L1AD4:	lda     #$01
 	sta     _VRAMUpdateReady
+;
+; PPU.mask = 0x1F;
+;
+	lda     #$1F
+	sta     $2001
 ;
 ; while (!endLoop) {
 ;
-L1A2E:	lda     _endLoop
-	jeq     L1A2C
+L1A70:	lda     _endLoop
+	jeq     L1A6E
 ;
 ; };
 ;
