@@ -21,6 +21,7 @@
 	.import		_WaitFrame
 	.import		_bankswitch
 	.import		_flushBGBuffer
+	.export		_endLoop
 	.export		_i
 	.export		_x
 	.export		_y
@@ -32,9 +33,12 @@
 	.export		_currentEntityId
 	.export		_currentMetaSpriteId
 	.export		_mapCurrentLine
+	.export		_timer
 	.export		_sprites
-	.export		_PALETTE
-	.export		_mapWidth
+	.export		_titlePalette
+	.export		_titleScreen
+	.export		_copyTitleScreen
+	.export		_mapPalette
 	.export		_map
 	.export		_mapLineCount
 	.export		_copyBgLine
@@ -53,6 +57,7 @@
 	.export		_bulletUpdate
 	.export		_spawnBullet
 	.export		_playerUpdate
+	.export		_loadPalette
 	.export		_main
 
 .segment	"DATA"
@@ -66,7 +71,1001 @@ _missileList:
 
 .segment	"RODATA"
 
-_PALETTE:
+_titlePalette:
+	.byte	$0F
+	.byte	$16
+	.byte	$27
+	.byte	$06
+	.byte	$0F
+	.byte	$2D
+	.byte	$2D
+	.byte	$2D
+	.byte	$0F
+	.byte	$30
+	.byte	$30
+	.byte	$0F
+	.byte	$0F
+	.byte	$19
+	.byte	$29
+	.byte	$39
+	.byte	$0F
+	.byte	$16
+	.byte	$05
+	.byte	$27
+	.byte	$0F
+	.byte	$11
+	.byte	$21
+	.byte	$31
+	.byte	$0F
+	.byte	$15
+	.byte	$25
+	.byte	$35
+	.byte	$0F
+	.byte	$19
+	.byte	$29
+	.byte	$39
+_titleScreen:
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$85
+	.byte	$86
+	.byte	$86
+	.byte	$86
+	.byte	$86
+	.byte	$87
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$95
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$97
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$95
+	.byte	$00
+	.byte	$B0
+	.byte	$B1
+	.byte	$00
+	.byte	$88
+	.byte	$86
+	.byte	$86
+	.byte	$86
+	.byte	$86
+	.byte	$86
+	.byte	$86
+	.byte	$86
+	.byte	$86
+	.byte	$86
+	.byte	$86
+	.byte	$86
+	.byte	$86
+	.byte	$86
+	.byte	$86
+	.byte	$86
+	.byte	$86
+	.byte	$87
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$95
+	.byte	$00
+	.byte	$C0
+	.byte	$C1
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$97
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$95
+	.byte	$00
+	.byte	$20
+	.byte	$21
+	.byte	$22
+	.byte	$23
+	.byte	$24
+	.byte	$25
+	.byte	$26
+	.byte	$27
+	.byte	$28
+	.byte	$29
+	.byte	$2A
+	.byte	$2B
+	.byte	$2C
+	.byte	$2D
+	.byte	$82
+	.byte	$83
+	.byte	$84
+	.byte	$26
+	.byte	$27
+	.byte	$00
+	.byte	$97
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$95
+	.byte	$00
+	.byte	$30
+	.byte	$31
+	.byte	$32
+	.byte	$33
+	.byte	$34
+	.byte	$35
+	.byte	$36
+	.byte	$37
+	.byte	$38
+	.byte	$39
+	.byte	$3A
+	.byte	$3B
+	.byte	$3C
+	.byte	$3D
+	.byte	$92
+	.byte	$93
+	.byte	$94
+	.byte	$36
+	.byte	$37
+	.byte	$00
+	.byte	$97
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$95
+	.byte	$00
+	.byte	$40
+	.byte	$41
+	.byte	$42
+	.byte	$43
+	.byte	$44
+	.byte	$45
+	.byte	$46
+	.byte	$47
+	.byte	$48
+	.byte	$49
+	.byte	$4A
+	.byte	$4B
+	.byte	$4C
+	.byte	$4D
+	.byte	$A2
+	.byte	$A3
+	.byte	$A4
+	.byte	$46
+	.byte	$47
+	.byte	$00
+	.byte	$97
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$95
+	.byte	$00
+	.byte	$50
+	.byte	$51
+	.byte	$52
+	.byte	$53
+	.byte	$54
+	.byte	$55
+	.byte	$56
+	.byte	$57
+	.byte	$58
+	.byte	$59
+	.byte	$5A
+	.byte	$5B
+	.byte	$5C
+	.byte	$5D
+	.byte	$B2
+	.byte	$B3
+	.byte	$B4
+	.byte	$56
+	.byte	$57
+	.byte	$00
+	.byte	$97
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$95
+	.byte	$00
+	.byte	$60
+	.byte	$61
+	.byte	$62
+	.byte	$63
+	.byte	$64
+	.byte	$65
+	.byte	$66
+	.byte	$67
+	.byte	$68
+	.byte	$69
+	.byte	$6A
+	.byte	$6B
+	.byte	$6C
+	.byte	$6D
+	.byte	$C2
+	.byte	$C3
+	.byte	$C4
+	.byte	$66
+	.byte	$67
+	.byte	$00
+	.byte	$97
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$95
+	.byte	$00
+	.byte	$70
+	.byte	$71
+	.byte	$72
+	.byte	$73
+	.byte	$74
+	.byte	$75
+	.byte	$76
+	.byte	$77
+	.byte	$78
+	.byte	$79
+	.byte	$7A
+	.byte	$7B
+	.byte	$7C
+	.byte	$7D
+	.byte	$D2
+	.byte	$D3
+	.byte	$D4
+	.byte	$76
+	.byte	$77
+	.byte	$00
+	.byte	$97
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$95
+	.byte	$00
+	.byte	$90
+	.byte	$91
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$97
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$95
+	.byte	$00
+	.byte	$A0
+	.byte	$A1
+	.byte	$00
+	.byte	$98
+	.byte	$A6
+	.byte	$A6
+	.byte	$A6
+	.byte	$A6
+	.byte	$A6
+	.byte	$A6
+	.byte	$A6
+	.byte	$A6
+	.byte	$A6
+	.byte	$A6
+	.byte	$A6
+	.byte	$A6
+	.byte	$A6
+	.byte	$A6
+	.byte	$A6
+	.byte	$A6
+	.byte	$A7
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$95
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$97
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$A5
+	.byte	$A6
+	.byte	$A6
+	.byte	$A6
+	.byte	$A6
+	.byte	$A7
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$B5
+	.byte	$B6
+	.byte	$B7
+	.byte	$B8
+	.byte	$B8
+	.byte	$00
+	.byte	$00
+	.byte	$B8
+	.byte	$B9
+	.byte	$BA
+	.byte	$B6
+	.byte	$B9
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$BE
+	.byte	$BC
+	.byte	$BA
+	.byte	$BB
+	.byte	$B6
+	.byte	$B7
+	.byte	$C9
+	.byte	$B5
+	.byte	$BB
+	.byte	$BC
+	.byte	$BD
+	.byte	$00
+	.byte	$C5
+	.byte	$C6
+	.byte	$C7
+	.byte	$C8
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+	.byte	$00
+_mapPalette:
 	.byte	$2A
 	.byte	$00
 	.byte	$10
@@ -99,8 +1098,6 @@ _PALETTE:
 	.byte	$19
 	.byte	$29
 	.byte	$39
-_mapWidth:
-	.byte	$20
 _map:
 	.byte	$01
 	.byte	$01
@@ -1087,6 +2084,8 @@ _playerSpriteFrames:
 .segment	"BSS"
 
 .segment	"ZEROPAGE"
+_endLoop:
+	.res	1,$00
 _i:
 	.res	2,$00
 _x:
@@ -1109,6 +2108,8 @@ _currentMetaSpriteId:
 	.res	1,$00
 _mapCurrentLine:
 	.res	2,$00
+_timer:
+	.res	2,$00
 .segment	"BSS"
 .segment	"OAM"
 _sprites:
@@ -1116,6 +2117,163 @@ _sprites:
 .segment	"BSS"
 _entities:
 	.res	144,$00
+
+; ---------------------------------------------------------------
+; void __near__ copyTitleScreen (void)
+; ---------------------------------------------------------------
+
+.segment	"CODE"
+
+.proc	_copyTitleScreen: near
+
+.segment	"CODE"
+
+;
+; PPU.vram.address = 0x20;
+;
+	lda     #$20
+	sta     $2006
+;
+; PPU.vram.address = 0x00;
+;
+	lda     #$00
+	sta     $2006
+;
+; for(i = 0; i < 30 * 32; i++) {
+;
+	sta     _i
+	sta     _i+1
+L03F7:	lda     _i+1
+	cmp     #$03
+	bne     L03FE
+	lda     _i
+	cmp     #$C0
+L03FE:	bcs     L03F8
+;
+; PPU.vram.data = titleScreen[i];
+;
+	lda     #<(_titleScreen)
+	sta     ptr1
+	lda     #>(_titleScreen)
+	clc
+	adc     _i+1
+	sta     ptr1+1
+	ldy     _i
+	lda     (ptr1),y
+	sta     $2007
+;
+; for(i = 0; i < 30 * 32; i++) {
+;
+	lda     _i
+	ldx     _i+1
+	clc
+	adc     #$01
+	bcc     L0400
+	inx
+L0400:	sta     _i
+	stx     _i+1
+	jmp     L03F7
+;
+; PPU.vram.address = 0x23;
+;
+L03F8:	lda     #$23
+	sta     $2006
+;
+; PPU.vram.address = 0xC0;
+;
+	lda     #$C0
+	sta     $2006
+;
+; for(i = 0; i < 40; i++) {
+;
+	lda     #$00
+	sta     _i
+	sta     _i+1
+L040B:	lda     _i+1
+	cmp     #$00
+	bne     L0412
+	lda     _i
+	cmp     #$28
+L0412:	bcs     L040C
+;
+; PPU.vram.data = 0x00;
+;
+	lda     #$00
+	sta     $2007
+;
+; for(i = 0; i < 40; i++) {
+;
+	lda     _i
+	ldx     _i+1
+	clc
+	adc     #$01
+	bcc     L0414
+	inx
+L0414:	sta     _i
+	stx     _i+1
+	jmp     L040B
+;
+; for(i = 40; i < 48; i++) {
+;
+L040C:	ldx     #$00
+	lda     #$28
+L0AD7:	sta     _i
+	stx     _i+1
+	lda     _i+1
+	cmp     #$00
+	bne     L041F
+	lda     _i
+	cmp     #$30
+L041F:	bcs     L0419
+;
+; PPU.vram.data = 0xAA;
+;
+	lda     #$AA
+	sta     $2007
+;
+; for(i = 40; i < 48; i++) {
+;
+	lda     _i
+	ldx     _i+1
+	clc
+	adc     #$01
+	bcc     L0AD7
+	inx
+	jmp     L0AD7
+;
+; for(i = 48; i < 64; i++) {
+;
+L0419:	ldx     #$00
+	lda     #$30
+L0AD8:	sta     _i
+	stx     _i+1
+	lda     _i+1
+	cmp     #$00
+	bne     L042C
+	lda     _i
+	cmp     #$40
+L042C:	bcs     L0426
+;
+; PPU.vram.data = 0x55;
+;
+	lda     #$55
+	sta     $2007
+;
+; for(i = 48; i < 64; i++) {
+;
+	lda     _i
+	ldx     _i+1
+	clc
+	adc     #$01
+	bcc     L0AD8
+	inx
+	jmp     L0AD8
+;
+; }
+;
+L0426:	rts
+
+.endproc
 
 ; ---------------------------------------------------------------
 ; void __near__ __fastcall__ copyBgLine (__near__ const unsigned char *, unsigned int)
@@ -1127,7 +2285,7 @@ _entities:
 
 .segment	"BSS"
 
-L03E4:
+L0805:
 	.res	2,$00
 
 .segment	"CODE"
@@ -1140,16 +2298,16 @@ L03E4:
 ; ptr = &BGBuffer;
 ;
 	lda     #<(_BGBuffer)
-	sta     L03E4
+	sta     L0805
 	lda     #>(_BGBuffer)
-	sta     L03E4+1
+	sta     L0805+1
 ;
 ; for(tile = 0; tile < 64; tile++) {
 ;
 	lda     #$00
-L066D:	sta     _tile
+L0ADB:	sta     _tile
 	cmp     #$40
-	bcs     L03E8
+	bcs     L0809
 ;
 ; tileIdx = buffer[line * 16 + ((tile & 0x1F) >> 1)] << 1;
 ;
@@ -1188,7 +2346,7 @@ L066D:	sta     _tile
 ;
 	lda     _tile
 	and     #$01
-	beq     L066C
+	beq     L0ADA
 ;
 ; ++tileIdx;
 ;
@@ -1196,9 +2354,9 @@ L066D:	sta     _tile
 ;
 ; if(tile >= 32) {
 ;
-L066C:	lda     _tile
+L0ADA:	lda     _tile
 	cmp     #$20
-	bcc     L03F7
+	bcc     L0818
 ;
 ; tileIdx += 0x10;
 ;
@@ -1209,16 +2367,16 @@ L066C:	lda     _tile
 ;
 ; (*ptr++) = tileIdx;
 ;
-L03F7:	lda     L03E4
-	ldx     L03E4+1
+L0818:	lda     L0805
+	ldx     L0805+1
 	sta     regsave
 	stx     regsave+1
 	clc
 	adc     #$01
-	bcc     L03FD
+	bcc     L081E
 	inx
-L03FD:	sta     L03E4
-	stx     L03E4+1
+L081E:	sta     L0805
+	stx     L0805+1
 	lda     _tileIdx
 	sta     (regsave),y
 ;
@@ -1227,11 +2385,11 @@ L03FD:	sta     L03E4
 	lda     _tile
 	clc
 	adc     #$01
-	jmp     L066D
+	jmp     L0ADB
 ;
 ; }
 ;
-L03E8:	jmp     incsp4
+L0809:	jmp     incsp4
 
 .endproc
 
@@ -1252,9 +2410,9 @@ L03E8:	jmp     incsp4
 	ldx     _mapLineCount+1
 	sec
 	sbc     #$1E
-	bcs     L0402
+	bcs     L0823
 	dex
-L0402:	sta     _mapCurrentLine
+L0823:	sta     _mapCurrentLine
 	stx     _mapCurrentLine+1
 ;
 ; PPU.vram.address = 0x20;
@@ -1271,12 +2429,12 @@ L0402:	sta     _mapCurrentLine
 ;
 	sta     _i
 	sta     _i+1
-L0409:	lda     _i+1
+L082A:	lda     _i+1
 	cmp     #$00
-	bne     L0410
+	bne     L0831
 	lda     _i
 	cmp     #$0F
-L0410:	bcs     L040A
+L0831:	bcs     L082B
 ;
 ; copyBgLine(map, mapCurrentLine + i);
 ;
@@ -1304,15 +2462,15 @@ L0410:	bcs     L040A
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L0412
+	bcc     L0833
 	inx
-L0412:	sta     _i
+L0833:	sta     _i
 	stx     _i+1
-	jmp     L0409
+	jmp     L082A
 ;
 ; PPU.vram.address = 0x28;
 ;
-L040A:	lda     #$28
+L082B:	lda     #$28
 	sta     $2006
 ;
 ; PPU.vram.address = 0x00;
@@ -1324,12 +2482,12 @@ L040A:	lda     #$28
 ;
 	sta     _i
 	sta     _i+1
-L041D:	lda     _i+1
+L083E:	lda     _i+1
 	cmp     #$00
-	bne     L0424
+	bne     L0845
 	lda     _i
 	cmp     #$0F
-L0424:	bcs     L041E
+L0845:	bcs     L083F
 ;
 ; copyBgLine(map, mapCurrentLine + 15 + i);
 ;
@@ -1340,10 +2498,10 @@ L0424:	bcs     L041E
 	ldx     _mapCurrentLine+1
 	clc
 	adc     #$0F
-	bcc     L066E
+	bcc     L0ADC
 	inx
 	clc
-L066E:	adc     _i
+L0ADC:	adc     _i
 	pha
 	txa
 	adc     _i+1
@@ -1362,15 +2520,15 @@ L066E:	adc     _i
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L0426
+	bcc     L0847
 	inx
-L0426:	sta     _i
+L0847:	sta     _i
 	stx     _i+1
-	jmp     L041D
+	jmp     L083E
 ;
 ; PPU.vram.address = 0x23;
 ;
-L041E:	lda     #$23
+L083F:	lda     #$23
 	sta     $2006
 ;
 ; PPU.vram.address = 0xC0;
@@ -1383,12 +2541,12 @@ L041E:	lda     #$23
 	lda     #$00
 	sta     _i
 	sta     _i+1
-L0432:	lda     _i+1
+L0853:	lda     _i+1
 	cmp     #$00
-	bne     L0439
+	bne     L085A
 	lda     _i
 	cmp     #$40
-L0439:	bcs     L0433
+L085A:	bcs     L0854
 ;
 ; PPU.vram.data = 0x00;
 ;
@@ -1401,15 +2559,15 @@ L0439:	bcs     L0433
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L043B
+	bcc     L085C
 	inx
-L043B:	sta     _i
+L085C:	sta     _i
 	stx     _i+1
-	jmp     L0432
+	jmp     L0853
 ;
 ; PPU.vram.address = 0x2B;
 ;
-L0433:	lda     #$2B
+L0854:	lda     #$2B
 	sta     $2006
 ;
 ; PPU.vram.address = 0xC0;
@@ -1422,12 +2580,12 @@ L0433:	lda     #$2B
 	lda     #$00
 	sta     _i
 	sta     _i+1
-L0445:	lda     _i+1
+L0866:	lda     _i+1
 	cmp     #$00
-	bne     L044C
+	bne     L086D
 	lda     _i
 	cmp     #$40
-L044C:	bcs     L0446
+L086D:	bcs     L0867
 ;
 ; PPU.vram.data = 0xFF;
 ;
@@ -1440,15 +2598,15 @@ L044C:	bcs     L0446
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L044E
+	bcc     L086F
 	inx
-L044E:	sta     _i
+L086F:	sta     _i
 	stx     _i+1
-	jmp     L0445
+	jmp     L0866
 ;
 ; }
 ;
-L0446:	rts
+L0867:	rts
 
 .endproc
 
@@ -1473,11 +2631,11 @@ L0446:	rts
 ;
 ; while(*ptr != 127) {
 ;
-	jmp     L047A
+	jmp     L089B
 ;
 ; if(x + *ptr < 255) {
 ;
-L0478:	ldy     #$05
+L0899:	ldy     #$05
 	lda     (sp),y
 	jsr     pusha0
 	ldy     #$03
@@ -1489,9 +2647,9 @@ L0478:	ldy     #$05
 	lda     (ptr1,x)
 	jsr     tosadda0
 	cpx     #$00
-	bne     L047E
+	bne     L089F
 	cmp     #$FF
-L047E:	jcs     L047C
+L089F:	jcs     L089D
 ;
 ; sprites[currentMetaSpriteId].x = x + *(ptr++);
 ;
@@ -1518,9 +2676,9 @@ L047E:	jcs     L047C
 	stx     regsave+1
 	clc
 	adc     #$01
-	bcc     L0483
+	bcc     L08A4
 	inx
-L0483:	jsr     staxysp
+L08A4:	jsr     staxysp
 	ldx     #$00
 	lda     (regsave,x)
 	jsr     tosadda0
@@ -1552,9 +2710,9 @@ L0483:	jsr     staxysp
 	stx     regsave+1
 	clc
 	adc     #$01
-	bcc     L0488
+	bcc     L08A9
 	inx
-L0488:	jsr     staxysp
+L08A9:	jsr     staxysp
 	ldx     #$00
 	lda     (regsave,x)
 	jsr     tosadda0
@@ -1583,9 +2741,9 @@ L0488:	jsr     staxysp
 	stx     regsave+1
 	clc
 	adc     #$01
-	bcc     L048D
+	bcc     L08AE
 	inx
-L048D:	jsr     staxysp
+L08AE:	jsr     staxysp
 	ldy     #$00
 	lda     (regsave),y
 	iny
@@ -1613,9 +2771,9 @@ L048D:	jsr     staxysp
 	stx     regsave+1
 	clc
 	adc     #$01
-	bcc     L0492
+	bcc     L08B3
 	inx
-L0492:	jsr     staxysp
+L08B3:	jsr     staxysp
 	ldy     #$00
 	lda     (regsave),y
 	ldy     #$02
@@ -1630,17 +2788,17 @@ L0492:	jsr     staxysp
 ;
 ; } else {
 ;
-	jmp     L047A
+	jmp     L089B
 ;
 ; ptr += 4; 
 ;
-L047C:	ldx     #$00
+L089D:	ldx     #$00
 	lda     #$04
 	jsr     addeq0sp
 ;
 ; while(*ptr != 127) {
 ;
-L047A:	ldy     #$01
+L089B:	ldy     #$01
 	lda     (sp),y
 	sta     ptr1+1
 	dey
@@ -1648,7 +2806,7 @@ L047A:	ldy     #$01
 	sta     ptr1
 	lda     (ptr1),y
 	cmp     #$7F
-	jne     L0478
+	jne     L0899
 ;
 ; }
 ;
@@ -1762,12 +2920,12 @@ L047A:	ldy     #$01
 	lda     #$00
 	sta     _i
 	sta     _i+1
-L04AA:	lda     _i+1
+L08CB:	lda     _i+1
 	cmp     #$00
-	bne     L04B1
+	bne     L08D2
 	lda     _i
 	cmp     #$10
-L04B1:	jcs     L04AB
+L08D2:	jcs     L08CC
 ;
 ; entities[i].x = 0;
 ;
@@ -1874,13 +3032,13 @@ L04B1:	jcs     L04AB
 	sta     ptr1+1
 	lda     _i
 	ora     _i+1
-	bne     L04CA
+	bne     L08EB
 	lda     #$FF
-	jmp     L066F
-L04CA:	lda     _i
+	jmp     L0ADD
+L08EB:	lda     _i
 	sec
 	sbc     #$01
-L066F:	ldy     #$00
+L0ADD:	ldy     #$00
 	sta     (ptr1),y
 ;
 ; entities[i].next = i == ENTITY_COUNT - 1 ? 0x0FF : i + 1;
@@ -1895,16 +3053,16 @@ L066F:	ldy     #$00
 	adc     #>(_entities)
 	sta     ptr1+1
 	lda     _i+1
-	bne     L04D3
+	bne     L08F4
 	lda     _i
 	cmp     #$0F
-	bne     L04D3
+	bne     L08F4
 	lda     #$FF
-	jmp     L0670
-L04D3:	lda     _i
+	jmp     L0ADE
+L08F4:	lda     _i
 	clc
 	adc     #$01
-L0670:	iny
+L0ADE:	iny
 	sta     (ptr1),y
 ;
 ; for(i = 0; i < ENTITY_COUNT; i++) {
@@ -1913,15 +3071,15 @@ L0670:	iny
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L04B3
+	bcc     L08D4
 	inx
-L04B3:	sta     _i
+L08D4:	sta     _i
 	stx     _i+1
-	jmp     L04AA
+	jmp     L08CB
 ;
 ; freeEntityList = 0;
 ;
-L04AB:	lda     #$00
+L08CC:	lda     #$00
 	sta     _freeEntityList
 ;
 ; entityList = 0xFF;
@@ -1964,7 +3122,7 @@ L04AB:	lda     #$00
 	sta     ptr1
 	lda     (ptr1),y
 	cmp     #$FF
-	beq     L04DF
+	beq     L0900
 ;
 ; entities[id].next = *list;
 ;
@@ -2015,7 +3173,7 @@ L04AB:	lda     #$00
 ;
 ; *list = id;
 ;
-L04DF:	iny
+L0900:	iny
 	lda     (sp),y
 	sta     ptr1+1
 	dey
@@ -2059,7 +3217,7 @@ L04DF:	iny
 	lda     (ptr1),y
 	ldy     #$02
 	cmp     (sp),y
-	bne     L067B
+	bne     L0AE9
 ;
 ; if(entities[id].next == 0xFF) {
 ;
@@ -2074,7 +3232,7 @@ L04DF:	iny
 	dey
 	lda     (ptr1),y
 	cmp     #$FF
-	bne     L0679
+	bne     L0AE7
 ;
 ; *list = 0xFF; // empty list
 ;
@@ -2088,11 +3246,11 @@ L04DF:	iny
 ;
 ; } else {
 ;
-	jmp     L04FB
+	jmp     L091C
 ;
 ; *list = entities[id].next;
 ;
-L0679:	jsr     pushw0sp
+L0AE7:	jsr     pushw0sp
 	ldy     #$04
 	ldx     #$00
 	lda     (sp),y
@@ -2130,11 +3288,11 @@ L0679:	jsr     pushw0sp
 ;
 ; } else {
 ;
-	jmp     L04FB
+	jmp     L091C
 ;
 ; entities[entities[id].prev].next = entities[id].next;
 ;
-L067B:	lda     (sp),y
+L0AE9:	lda     (sp),y
 	jsr     mulax9
 	sta     ptr1
 	txa
@@ -2169,7 +3327,7 @@ L067B:	lda     (sp),y
 ;
 ; entities[id].next = 0xFF;
 ;
-L04FB:	ldy     #$02
+L091C:	ldy     #$02
 	ldx     #$00
 	lda     (sp),y
 	jsr     mulax9
@@ -2346,7 +3504,7 @@ L04FB:	ldy     #$02
 	ldy     #$05
 	jsr     ldaidx
 	asl     a
-	bcc     L0516
+	bcc     L0937
 	ldx     #$00
 	lda     _currentEntityId
 	jsr     mulax9
@@ -2384,8 +3542,8 @@ L04FB:	ldy     #$02
 	ldy     #$03
 	lda     (ptr1),y
 	jsr     tosicmp0
-	beq     L0516
-	bcc     L0516
+	beq     L0937
+	bcc     L0937
 ;
 ; removeEntity(currentEntityId, &entityList);
 ;
@@ -2405,7 +3563,7 @@ L04FB:	ldy     #$02
 ;
 ; drawSprite(entities[currentEntityId].x, entities[currentEntityId].y, 0x60, 0x00);
 ;
-L0516:	jsr     decsp3
+L0937:	jsr     decsp3
 	ldx     #$00
 	lda     _currentEntityId
 	jsr     mulax9
@@ -2449,7 +3607,7 @@ L0516:	jsr     decsp3
 
 .segment	"BSS"
 
-L052C:
+L094D:
 	.res	1,$00
 
 .segment	"CODE"
@@ -2464,12 +3622,12 @@ L052C:
 	lda     #<(_freeEntityList)
 	ldx     #>(_freeEntityList)
 	jsr     _popEntity
-	sta     L052C
+	sta     L094D
 ;
 ; if(id != 0xFF) {
 ;
 	cmp     #$FF
-	bne     L067E
+	bne     L0AEC
 ;
 ; }
 ;
@@ -2477,7 +3635,7 @@ L052C:
 ;
 ; pushEntity(id, &entityList);
 ;
-L067E:	lda     L052C
+L0AEC:	lda     L094D
 	jsr     pusha
 	lda     #<(_entityList)
 	ldx     #>(_entityList)
@@ -2486,7 +3644,7 @@ L067E:	lda     L052C
 ; entities[id].x = x;
 ;
 	ldx     #$00
-	lda     L052C
+	lda     L094D
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -2502,7 +3660,7 @@ L067E:	lda     L052C
 ; entities[id].y = y;
 ;
 	ldx     #$00
-	lda     L052C
+	lda     L094D
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -2518,7 +3676,7 @@ L067E:	lda     L052C
 ; entities[id].vx = 0;
 ;
 	ldx     #$00
-	lda     L052C
+	lda     L094D
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -2533,7 +3691,7 @@ L067E:	lda     L052C
 ; entities[id].vy = -4;
 ;
 	tax
-	lda     L052C
+	lda     L094D
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -2548,7 +3706,7 @@ L067E:	lda     L052C
 ; entities[id].health = 255;
 ;
 	ldx     #$00
-	lda     L052C
+	lda     L094D
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -2563,7 +3721,7 @@ L067E:	lda     L052C
 ; entities[id].update = bulletUpdate;
 ;
 	ldx     #$00
-	lda     L052C
+	lda     L094D
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -2599,7 +3757,7 @@ L067E:	lda     L052C
 ;
 	lda     _InputPort1
 	and     #$08
-	beq     L0680
+	beq     L0AEE
 ;
 ; if (entities[currentEntityId].vy > -6) {
 ;
@@ -2617,9 +3775,9 @@ L067E:	lda     L052C
 	jsr     ldaidx
 	sec
 	sbc     #$FB
-	bvs     L054D
+	bvs     L096E
 	eor     #$80
-L054D:	jpl     L0684
+L096E:	jpl     L0AF2
 ;
 ; entities[currentEntityId].vy -= 1;
 ;
@@ -2642,11 +3800,11 @@ L054D:	jpl     L0684
 ;
 ; else if(InputPort1 & BUTTON_DOWN) {
 ;
-	jmp     L0684
-L0680:	lda     _InputPort1
+	jmp     L0AF2
+L0AEE:	lda     _InputPort1
 	ldx     #$00
 	and     #$04
-	beq     L0681
+	beq     L0AEF
 ;
 ; if (entities[currentEntityId].vy < 6) {
 ;
@@ -2663,9 +3821,9 @@ L0680:	lda     _InputPort1
 	jsr     ldaidx
 	sec
 	sbc     #$06
-	bvc     L0557
+	bvc     L0978
 	eor     #$80
-L0557:	jpl     L0684
+L0978:	jpl     L0AF2
 ;
 ; entities[currentEntityId].vy += 1;
 ;
@@ -2688,8 +3846,8 @@ L0557:	jpl     L0684
 ;
 ; } else if(entities[currentEntityId].vy > 2) {
 ;
-	jmp     L0684
-L0681:	lda     _currentEntityId
+	jmp     L0AF2
+L0AEF:	lda     _currentEntityId
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -2702,11 +3860,11 @@ L0681:	lda     _currentEntityId
 	jsr     ldaidx
 	sec
 	sbc     #$03
-	bvs     L055F
+	bvs     L0980
 	eor     #$80
-L055F:	asl     a
+L0980:	asl     a
 	ldx     #$00
-	bcc     L0682
+	bcc     L0AF0
 ;
 ; entities[currentEntityId].vy -= 2;
 ;
@@ -2728,8 +3886,8 @@ L055F:	asl     a
 ;
 ; } else if(entities[currentEntityId].vy < -2) {
 ;
-	jmp     L0684
-L0682:	lda     _currentEntityId
+	jmp     L0AF2
+L0AF0:	lda     _currentEntityId
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -2742,11 +3900,11 @@ L0682:	lda     _currentEntityId
 	jsr     ldaidx
 	sec
 	sbc     #$FE
-	bvc     L0567
+	bvc     L0988
 	eor     #$80
-L0567:	asl     a
+L0988:	asl     a
 	ldx     #$00
-	bcc     L0683
+	bcc     L0AF1
 ;
 ; entities[currentEntityId].vy += 2;
 ;
@@ -2768,11 +3926,11 @@ L0567:	asl     a
 ;
 ; } else {
 ;
-	jmp     L0684
+	jmp     L0AF2
 ;
 ; entities[currentEntityId].vy = 0;
 ;
-L0683:	lda     _currentEntityId
+L0AF1:	lda     _currentEntityId
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -2785,9 +3943,9 @@ L0683:	lda     _currentEntityId
 ;
 ; if(InputPort1 & BUTTON_LEFT) {
 ;
-L0684:	lda     _InputPort1
+L0AF2:	lda     _InputPort1
 	and     #$02
-	beq     L0685
+	beq     L0AF3
 ;
 ; if (entities[currentEntityId].vx > -6) {
 ;
@@ -2805,9 +3963,9 @@ L0684:	lda     _InputPort1
 	jsr     ldaidx
 	sec
 	sbc     #$FB
-	bvs     L0574
+	bvs     L0995
 	eor     #$80
-L0574:	jpl     L0689
+L0995:	jpl     L0AF7
 ;
 ; --entities[currentEntityId].vx;
 ;
@@ -2826,11 +3984,11 @@ L0574:	jpl     L0689
 ;
 ; } else if(InputPort1 & BUTTON_RIGHT) {
 ;
-	jmp     L067F
-L0685:	lda     _InputPort1
+	jmp     L0AED
+L0AF3:	lda     _InputPort1
 	ldx     #$00
 	and     #$01
-	beq     L0686
+	beq     L0AF4
 ;
 ; if (entities[currentEntityId].vx < 6) {
 ;
@@ -2847,9 +4005,9 @@ L0685:	lda     _InputPort1
 	jsr     ldaidx
 	sec
 	sbc     #$06
-	bvc     L057D
+	bvc     L099E
 	eor     #$80
-L057D:	jpl     L0689
+L099E:	jpl     L0AF7
 ;
 ; ++entities[currentEntityId].vx;
 ;
@@ -2868,8 +4026,8 @@ L057D:	jpl     L0689
 ;
 ; } else if(entities[currentEntityId].vx > 2) {
 ;
-	jmp     L067F
-L0686:	lda     _currentEntityId
+	jmp     L0AED
+L0AF4:	lda     _currentEntityId
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -2882,11 +4040,11 @@ L0686:	lda     _currentEntityId
 	jsr     ldaidx
 	sec
 	sbc     #$03
-	bvs     L0584
+	bvs     L09A5
 	eor     #$80
-L0584:	asl     a
+L09A5:	asl     a
 	ldx     #$00
-	bcc     L0687
+	bcc     L0AF5
 ;
 ; entities[currentEntityId].vx -= 2;
 ;
@@ -2908,8 +4066,8 @@ L0584:	asl     a
 ;
 ; } else if(entities[currentEntityId].vx < -2) {
 ;
-	jmp     L0689
-L0687:	lda     _currentEntityId
+	jmp     L0AF7
+L0AF5:	lda     _currentEntityId
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -2922,11 +4080,11 @@ L0687:	lda     _currentEntityId
 	jsr     ldaidx
 	sec
 	sbc     #$FE
-	bvc     L058C
+	bvc     L09AD
 	eor     #$80
-L058C:	asl     a
+L09AD:	asl     a
 	ldx     #$00
-	bcc     L0688
+	bcc     L0AF6
 ;
 ; entities[currentEntityId].vx += 2;
 ;
@@ -2948,11 +4106,11 @@ L058C:	asl     a
 ;
 ; } else {
 ;
-	jmp     L0689
+	jmp     L0AF7
 ;
 ; entities[currentEntityId].vx = 0;
 ;
-L0688:	lda     _currentEntityId
+L0AF6:	lda     _currentEntityId
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -2961,17 +4119,17 @@ L0688:	lda     _currentEntityId
 	adc     #>(_entities)
 	sta     ptr1+1
 	lda     #$00
-L067F:	sta     (ptr1),y
+L0AED:	sta     (ptr1),y
 ;
 ; if((InputPort1 & BUTTON_B) && !(InputPort1Prev & BUTTON_B)) {
 ;
-L0689:	lda     _InputPort1
+L0AF7:	lda     _InputPort1
 	ldx     #$00
 	and     #$40
-	beq     L068D
+	beq     L0AFB
 	lda     _InputPort1Prev
 	and     #$40
-	bne     L068D
+	bne     L0AFB
 ;
 ; spawnBullet(entities[currentEntityId].x + 4, entities[currentEntityId].y + 8);
 ;
@@ -3006,7 +4164,7 @@ L0689:	lda     _InputPort1
 ; if(entities[currentEntityId].vy < 0 && entities[currentEntityId].y + entities[currentEntityId].vy > entities[currentEntityId].y) {
 ;
 	ldx     #$00
-L068D:	lda     _currentEntityId
+L0AFB:	lda     _currentEntityId
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -3019,7 +4177,7 @@ L068D:	lda     _currentEntityId
 	jsr     ldaidx
 	asl     a
 	ldx     #$00
-	jcc     L0690
+	jcc     L0AFE
 	lda     _currentEntityId
 	jsr     mulax9
 	clc
@@ -3056,8 +4214,8 @@ L068D:	lda     _currentEntityId
 	ldy     #$03
 	lda     (ptr1),y
 	jsr     tosicmp0
-	beq     L0696
-	bcc     L0696
+	beq     L0B04
+	bcc     L0B04
 ;
 ; entities[currentEntityId].y = 0;
 ;
@@ -3091,8 +4249,8 @@ L068D:	lda     _currentEntityId
 ;
 ; if(entities[currentEntityId].y + entities[currentEntityId].vy > 218) {
 ;
-L0696:	ldx     #$00
-L0690:	lda     _currentEntityId
+L0B04:	ldx     #$00
+L0AFE:	lda     _currentEntityId
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -3119,7 +4277,7 @@ L0690:	lda     _currentEntityId
 	txa
 	sbc     #$00
 	ldx     #$00
-	bcc     L0691
+	bcc     L0AFF
 ;
 ; entities[currentEntityId].y = 218;
 ;
@@ -3153,7 +4311,7 @@ L0690:	lda     _currentEntityId
 ; if(entities[currentEntityId].vx < 0 && entities[currentEntityId].x + entities[currentEntityId].vx > entities[currentEntityId].x) {
 ;
 	tax
-L0691:	lda     _currentEntityId
+L0AFF:	lda     _currentEntityId
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -3166,7 +4324,7 @@ L0691:	lda     _currentEntityId
 	jsr     ldaidx
 	asl     a
 	ldx     #$00
-	jcc     L0694
+	jcc     L0B02
 	lda     _currentEntityId
 	jsr     mulax9
 	clc
@@ -3203,8 +4361,8 @@ L0691:	lda     _currentEntityId
 	ldy     #$02
 	lda     (ptr1),y
 	jsr     tosicmp0
-	beq     L0697
-	bcc     L0697
+	beq     L0B05
+	bcc     L0B05
 ;
 ; entities[currentEntityId].x = 0;
 ;
@@ -3238,8 +4396,8 @@ L0691:	lda     _currentEntityId
 ;
 ; if(entities[currentEntityId].x + entities[currentEntityId].vx > 240) {
 ;
-L0697:	ldx     #$00
-L0694:	lda     _currentEntityId
+L0B05:	ldx     #$00
+L0B02:	lda     _currentEntityId
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -3266,7 +4424,7 @@ L0694:	lda     _currentEntityId
 	txa
 	sbc     #$00
 	ldx     #$00
-	bcc     L0695
+	bcc     L0B03
 ;
 ; entities[currentEntityId].x = 240;
 ;
@@ -3300,7 +4458,7 @@ L0694:	lda     _currentEntityId
 ; entities[currentEntityId].x += entities[currentEntityId].vx;
 ;
 	tax
-L0695:	lda     _currentEntityId
+L0B03:	lda     _currentEntityId
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -3412,6 +4570,71 @@ L0695:	lda     _currentEntityId
 .endproc
 
 ; ---------------------------------------------------------------
+; void __near__ loadPalette (__near__ const unsigned char *)
+; ---------------------------------------------------------------
+
+.segment	"CODE"
+
+.proc	_loadPalette: near
+
+.segment	"CODE"
+
+;
+; void loadPalette(const uint8_t *pal) {
+;
+	jsr     pushax
+;
+; PPU.vram.address = 0x3f;
+;
+	lda     #$3F
+	sta     $2006
+;
+; PPU.vram.address = 0x00;
+;
+	lda     #$00
+	sta     $2006
+;
+; for ( i = 0; i < 32; ++i ) {
+;
+	sta     _i
+	sta     _i+1
+L0A09:	lda     _i+1
+	cmp     #$00
+	bne     L0A10
+	lda     _i
+	cmp     #$20
+L0A10:	bcs     L0A0A
+;
+; PPU.vram.data = pal[i];
+;
+	ldy     #$01
+	lda     (sp),y
+	tax
+	dey
+	lda     (sp),y
+	clc
+	adc     _i
+	sta     ptr1
+	txa
+	adc     _i+1
+	sta     ptr1+1
+	lda     (ptr1),y
+	sta     $2007
+;
+; for ( i = 0; i < 32; ++i ) {
+;
+	inc     _i
+	bne     L0A09
+	inc     _i+1
+	jmp     L0A09
+;
+; }
+;
+L0A0A:	jmp     incsp2
+
+.endproc
+
+; ---------------------------------------------------------------
 ; void __near__ main (void)
 ; ---------------------------------------------------------------
 
@@ -3422,55 +4645,190 @@ L0695:	lda     _currentEntityId
 .segment	"CODE"
 
 ;
-; PPU.vram.address = 0x3f;
+; APU.status = 0x0F;
 ;
 	jsr     decsp1
+	lda     #$0F
+	sta     $4015
+;
+; bankswitch(1);
+;
+	lda     #$01
+	jsr     _bankswitch
+;
+; loadPalette(titlePalette);
+;
+	lda     #<(_titlePalette)
+	ldx     #>(_titlePalette)
+	jsr     _loadPalette
+;
+; copyTitleScreen();
+;
+	jsr     _copyTitleScreen
+;
+; Scroll = 239;
+;
+	ldx     #$00
+	lda     #$EF
+	sta     _Scroll
+	stx     _Scroll+1
+;
+; timer = 0;
+;
+	txa
+	sta     _timer
+	sta     _timer+1
+;
+; VRAMUpdateReady = 1;
+;
+	lda     #$01
+	sta     _VRAMUpdateReady
+;
+; PPU.control = PPUCTRL_NAMETABLE_0 | PPUCTRL_INC_1_HORIZ | PPUCTRL_BPATTERN_0 | PPUCTRL_SPATTERN_1 | PPUCTRL_NMI_ON;
+;
+	lda     #$88
+	sta     $2000
+;
+; while (!endLoop) {
+;
+	jmp     L0A2C
+;
+; WaitFrame();
+;
+L0A2A:	jsr     _WaitFrame
+;
+; if(timer > 32) {
+;
+	lda     _timer
+	cmp     #$21
+	lda     _timer+1
+	sbc     #$00
+	bcc     L0A2F
+;
+; Scroll = 0;
+;
+	lda     #$00
+	sta     _Scroll
+	sta     _Scroll+1
+;
+; PPU.vram.address = 0x3f;
+;
 	lda     #$3F
 	sta     $2006
+;
+; PPU.vram.address = 0x0B;
+;
+	lda     #$0B
+	sta     $2006
+;
+; PPU.vram.data = (((FrameCount >> 2) & 0x03) << 4) + 0x06;
+;
+	lda     _FrameCount
+	lsr     a
+	lsr     a
+	and     #$03
+	asl     a
+	asl     a
+	asl     a
+	asl     a
+	clc
+	adc     #$06
+	sta     $2007
 ;
 ; PPU.vram.address = 0x00;
 ;
 	lda     #$00
 	sta     $2006
 ;
-; for ( i = 0; i < sizeof(PALETTE); ++i ) {
+; PPU.vram.address = 0x00;
 ;
-	sta     _i
-	sta     _i+1
-L05E8:	lda     _i+1
-	cmp     #$00
-	bne     L05F0
-	lda     _i
-	cmp     #$20
-L05F0:	bcs     L05E9
+	sta     $2006
 ;
-; PPU.vram.data = PALETTE[i];
+; if((InputPort1 & BUTTON_START) && !(InputPort1Prev & BUTTON_START)) {
 ;
-	lda     #<(_PALETTE)
-	sta     ptr1
-	lda     #>(_PALETTE)
-	clc
-	adc     _i+1
-	sta     ptr1+1
-	ldy     _i
-	lda     (ptr1),y
-	sta     $2007
+	lda     _InputPort1
+	and     #$10
+	beq     L0A2C
+	lda     _InputPort1Prev
+	and     #$10
+	bne     L0A2C
 ;
-; for ( i = 0; i < sizeof(PALETTE); ++i ) {
+; endLoop = 1;
 ;
-	inc     _i
-	bne     L05E8
-	inc     _i+1
-	jmp     L05E8
+	lda     #$01
+	sta     _endLoop
 ;
-; initEntityList();
+; } else {
 ;
-L05E9:	jsr     _initEntityList
+	jmp     L0A2C
+;
+; ++timer;
+;
+L0A2F:	inc     _timer
+	bne     L0A50
+	inc     _timer+1
+;
+; if(Scroll > 0) 
+;
+L0A50:	lda     _Scroll
+	ora     _Scroll+1
+	beq     L0A51
+;
+; Scroll -= 16;
+;
+	lda     _Scroll
+	sec
+	sbc     #$10
+	sta     _Scroll
+	bcs     L0A51
+	dec     _Scroll+1
+;
+; if(Scroll > 0x100)
+;
+L0A51:	lda     _Scroll
+	cmp     #$01
+	lda     _Scroll+1
+	sbc     #$01
+	bcc     L0A2C
+;
+; Scroll = 0;
+;
+	lda     #$00
+	sta     _Scroll
+	sta     _Scroll+1
+;
+; while (!endLoop) {
+;
+L0A2C:	lda     _endLoop
+	jeq     L0A2A
+;
+; WaitFrame();
+;
+	jsr     _WaitFrame
+;
+; PPU.control = PPUCTRL_NAMETABLE_0 | PPUCTRL_INC_1_HORIZ | PPUCTRL_BPATTERN_0 | PPUCTRL_SPATTERN_1 | PPUCTRL_NMI_OFF;
+;
+	lda     #$08
+	sta     $2000
+;
+; PPU.mask = 0;
+;
+	lda     #$00
+	sta     $2001
 ;
 ; bankswitch(0);
 ;
-	lda     #$00
 	jsr     _bankswitch
+;
+; loadPalette(mapPalette);
+;
+	lda     #<(_mapPalette)
+	ldx     #>(_mapPalette)
+	jsr     _loadPalette
+;
+; initEntityList();
+;
+	jsr     _initEntityList
 ;
 ; fillBackground();
 ;
@@ -3594,25 +4952,24 @@ L05E9:	jsr     _initEntityList
 	lda     #$88
 	sta     $2000
 ;
-; PPU.mask = PPUMASK_L8_BSHOW | PPUMASK_L8_SSHOW | PPUMASK_SSHOW | PPUMASK_BSHOW;
-;
-	lda     #$1E
-	sta     $2001
-;
-; APU.status = 0x0F;
-;
-	lda     #$0F
-	sta     $4015
-;
 ; Scroll = 0x108;
 ;
 	ldx     #$01
 	sty     _Scroll
 	stx     _Scroll+1
 ;
+; endLoop = 0;
+;
+	lda     #$00
+	sta     _endLoop
+;
+; while (!endLoop) {
+;
+	jmp     L0A8C
+;
 ; WaitFrame();
 ;
-L0620:	jsr     _WaitFrame
+L0A8A:	jsr     _WaitFrame
 ;
 ; currentMetaSpriteId = 0; // might be done in nmi?
 ;
@@ -3623,16 +4980,16 @@ L0620:	jsr     _WaitFrame
 ;
 	lda     _mapCurrentLine+1
 	cmp     #$FF
-	bne     L069A
+	bne     L0B0B
 	lda     _mapCurrentLine
 	cmp     #$FF
-	jeq     L06A1
+	jeq     L0B12
 ;
 ; if(Scroll > 0) {
 ;
-L069A:	lda     _Scroll
+L0B0B:	lda     _Scroll
 	ora     _Scroll+1
-	beq     L062D
+	beq     L0A97
 ;
 ; --Scroll;
 ;
@@ -3640,16 +4997,16 @@ L069A:	lda     _Scroll
 	sec
 	sbc     #$01
 	sta     _Scroll
-	bcs     L0631
+	bcs     L0A9B
 	dec     _Scroll+1
 ;
 ; if(Scroll == 255) {
 ;
-L0631:	lda     _Scroll+1
-	bne     L0637
+L0A9B:	lda     _Scroll+1
+	bne     L0AA1
 	lda     _Scroll
 	cmp     #$FF
-	bne     L0637
+	bne     L0AA1
 ;
 ; Scroll = 239;
 ;
@@ -3657,41 +5014,41 @@ L0631:	lda     _Scroll+1
 ;
 ; } else {
 ;
-	jmp     L06A3
+	jmp     L0B14
 ;
 ; Scroll = 256 + 239;
 ;
-L062D:	ldx     #$01
-L06A3:	lda     #$EF
+L0A97:	ldx     #$01
+L0B14:	lda     #$EF
 	sta     _Scroll
 	stx     _Scroll+1
 ;
 ; if((Scroll & 0x0F) == 0x0F && mapCurrentLine != 0xFFFF) {
 ;
-L0637:	lda     _Scroll
+L0AA1:	lda     _Scroll
 	ldx     #$00
 	and     #$0F
 	cmp     #$0F
-	bne     L069E
+	bne     L0B0F
 	lda     _mapCurrentLine+1
 	cmp     #$FF
-	bne     L069C
+	bne     L0B0D
 	lda     _mapCurrentLine
 	cmp     #$FF
-	beq     L069E
+	beq     L0B0F
 ;
 ; --mapCurrentLine;
 ;
-L069C:	lda     _mapCurrentLine
+L0B0D:	lda     _mapCurrentLine
 	sec
 	sbc     #$01
 	sta     _mapCurrentLine
-	bcs     L0642
+	bcs     L0AAC
 	dec     _mapCurrentLine+1
 ;
 ; copyBgLine(map, mapCurrentLine);
 ;
-L0642:	lda     #<(_map)
+L0AAC:	lda     #<(_map)
 	ldx     #>(_map)
 	jsr     pushax
 	lda     _mapCurrentLine
@@ -3705,11 +5062,11 @@ L0642:	lda     #<(_map)
 	lda     _Scroll+1
 	sbc     #$00
 	lda     #$00
-	bcc     L0649
+	bcc     L0AB3
 	ldx     #$28
-	jmp     L069D
-L0649:	ldx     #$20
-L069D:	sta     ptr1
+	jmp     L0B0E
+L0AB3:	ldx     #$20
+L0B0E:	sta     ptr1
 	stx     ptr1+1
 	lda     _Scroll
 	ldx     #$00
@@ -3728,17 +5085,17 @@ L069D:	sta     ptr1
 ;
 ; currentEntityId = entityList;
 ;
-L06A1:	ldx     #$00
-L069E:	lda     _entityList
+L0B12:	ldx     #$00
+L0B0F:	lda     _entityList
 	sta     _currentEntityId
 ;
 ; while(currentEntityId != 0xFF) {
 ;
-	jmp     L06A0
+	jmp     L0B11
 ;
 ; uint8_t next = entities[currentEntityId].next;
 ;
-L069F:	lda     _currentEntityId
+L0B10:	lda     _currentEntityId
 	jsr     mulax9
 	clc
 	adc     #<(_entities)
@@ -3781,21 +5138,21 @@ L069F:	lda     _currentEntityId
 ; while(currentEntityId != 0xFF) {
 ;
 	ldx     #$00
-L06A0:	lda     _currentEntityId
+L0B11:	lda     _currentEntityId
 	cmp     #$FF
-	bne     L069F
+	bne     L0B10
 ;
 ; for(i = currentMetaSpriteId; i < 64; i++) {
 ;
 	lda     _currentMetaSpriteId
 	sta     _i
 	stx     _i+1
-L065C:	lda     _i+1
+L0AC6:	lda     _i+1
 	cmp     #$00
-	bne     L0663
+	bne     L0ACD
 	lda     _i
 	cmp     #$40
-L0663:	bcs     L065D
+L0ACD:	bcs     L0AC7
 ;
 ; sprites[i].y = 240;
 ;
@@ -3818,20 +5175,25 @@ L0663:	bcs     L065D
 	ldx     _i+1
 	clc
 	adc     #$01
-	bcc     L0665
+	bcc     L0ACF
 	inx
-L0665:	sta     _i
+L0ACF:	sta     _i
 	stx     _i+1
-	jmp     L065C
+	jmp     L0AC6
 ;
 ; VRAMUpdateReady = 1;
 ;
-L065D:	lda     #$01
+L0AC7:	lda     #$01
 	sta     _VRAMUpdateReady
 ;
-; while (1) {
+; while (!endLoop) {
 ;
-	jmp     L0620
+L0A8C:	lda     _endLoop
+	jeq     L0A8A
+;
+; };
+;
+	jmp     incsp1
 
 .endproc
 
