@@ -1,8 +1,10 @@
 ; startup code for cc65/ca65
 
-.import _main
+.import _main, popa
 .export __STARTUP__:absolute=1
 .export _WaitFrame
+.export _music_play,_music_stop,_music_pause
+.export _sfx_play,_sample_play
 .exportzp _FrameCount, _InputPort1, _InputPort1Prev, _InputPort2, _InputPort2Prev, _VRAMUpdateReady, _Scroll, _BGDestAddr, _BGBuffer
 
 ; linker-generated symbols
@@ -11,6 +13,16 @@
 .import __OAM_LOAD__
 .import __RAM_START__   ,__RAM_SIZE__
 .include "zeropage.inc"
+
+FT_BASE_ADR             =$0700
+FT_DPCM_OFF             = $c000
+FT_SFX_STREAMS          = 4
+.define FT_NTSC_SUPPORT 1
+.define FT_PAL_SUPPORT  0
+.define FT_DPCM_ENABLE  0
+.define FT_SFX_ENABLE   1
+.define FT_THREAD       1
+.define FT_PITCH_FIX    0
 
 ; definitions
 PPU_CTRL      = $2000
@@ -43,6 +55,8 @@ _InputPort1:       .res 1
 _InputPort1Prev:   .res 1
 _InputPort2:       .res 1
 _InputPort2Prev:   .res 1
+
+FT_TEMP:            .res 3
 
 ; arbitrary-use temp vars
 temp1:             .res 1
@@ -124,6 +138,18 @@ start:
     inx
     inx
     bne @clear_oam
+
+; famitone init
+    ldx #<music_data
+    ldy #>music_data
+    lda #01
+    jsr FamiToneInit
+
+.if(FT_SFX_ENABLE)
+    ldx #<sounds_data
+    ldy #>sounds_data
+    jsr FamiToneSfxInit
+.endif
 
     ; Second of two waits for vertical blank to make sure that the
     ; PPU has stabilized
@@ -303,6 +329,9 @@ nmi:
     ORA #$88
     STA PPU_CTRL
 
+    ; update famitone
+    JSR FamiToneUpdate
+
     ;LDA #%00011111 ; gray the scrolled part of the screen
     ;STA PPU_MASK
 
@@ -320,8 +349,45 @@ irq:
     ; do nothing
     RTI
 
-.segment "RODATA"
+    .include "famitone2.s"
 
+_music_play=FamiToneMusicPlay
+_music_stop=FamiToneMusicStop
+_music_pause=FamiToneMusicPause
+
+_sfx_play:
+.if(FT_SFX_ENABLE)
+
+    and #$03
+    tax
+    lda @sfxPriority,x
+    tax
+    jsr popa
+    jmp FamiToneSfxPlay
+
+@sfxPriority:
+
+    .byte FT_SFX_CH0,FT_SFX_CH1,FT_SFX_CH2,FT_SFX_CH3
+    
+.else
+    rts
+.endif
+
+.if(FT_DPCM_ENABLE)
+_sample_play=FamiToneSamplePlay
+.else
+_sample_play:
+    rts
+.endif
+
+.segment "RODATA"
+music_data:
+    .include "music.s"
+
+.if(FT_SFX_ENABLE)
+sounds_data:
+    .include "sounds.s"
+.endif
 ; nothing yet
 
 .segment "VECTORS"

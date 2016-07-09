@@ -52,7 +52,7 @@
 
 #define BULLET_SPRITE 56
 #define ARROW_SPRITE 60
-#define ENTITY_COUNT 5
+#define ENTITY_COUNT 16
 
 typedef struct _Sprite {
     uint8_t y;          // y pixel coordinate
@@ -69,10 +69,6 @@ typedef struct _Entity {
     // position 
     uint8_t x;
     uint8_t y;
-
-    // speed?
-    int8_t vx;
-    int8_t vy;
 
     // health
     uint8_t health;
@@ -113,6 +109,13 @@ void WaitFrame(void);
 void __fastcall__ bankswitch(unsigned char bank);
 void flushBGBuffer();
 
+void __fastcall__ music_play(unsigned char song);
+void __fastcall__ music_stop(void);
+void __fastcall__ music_pause(unsigned char pause);
+
+void __fastcall__ sfx_play(unsigned char sound,unsigned char channel);
+void __fastcall__ sample_play(unsigned char sample);
+
 #pragma bss-name(push, "ZEROPAGE")
 uint8_t endLoop;
 size_t i, x, y, mapX, mapY, tileIndex;
@@ -123,13 +126,17 @@ uint16_t mapCurrentLine;
 uint16_t timer;
 uint8_t scrollIncrement;
 uint8_t playerId;
-Entity entities[ENTITY_COUNT];
 uint8_t nextBullet = 0;
 uint8_t nextArrow = 0;
 uint8_t freeEntityList = 0xFF;
 uint8_t entityList = 0xFF;
 uint8_t playerBlink;
 #pragma bss-name(pop)
+uint8_t playerX;
+uint8_t playerY;
+uint8_t playerHealth;
+
+Entity entities[ENTITY_COUNT];
 
 #pragma bss-name(push, "OAM")
 Sprite sprites[64];
@@ -281,8 +288,6 @@ void initEntityList() {
     for(i = 0; i < ENTITY_COUNT; i++) {
         entities[i].x = 0;
         entities[i].y = 0;
-        entities[i].vx = 0;
-        entities[i].vy = 0;
         entities[i].kind = 0xFF;
         entities[i].health = 0;
         entities[i].prev = i == 0? 0xFF : i - 1;
@@ -341,6 +346,8 @@ void __fastcall__ spawnBullet(uint8_t x, uint8_t y) {
         sprites[BULLET_SPRITE + nextBullet].attributes = 0x02;
 
         nextBullet = (nextBullet + 1) & 0x3;
+
+        sfx_play(0x01, 0x02);
     }
 }
 
@@ -373,67 +380,75 @@ void fireUpdate() {
 }
 
 void knightWalkUpdate() {
-    entities[currentEntityId].y += scrollIncrement;
+    static uint8_t *ptr;
+    ptr = (uint8_t *)&entities[currentEntityId];
+
+    ptr[3] += scrollIncrement;
 
     if(!(FrameCount & 0x1)) {
-        if(entities[currentEntityId].x < entities[playerId].x + 8)
-            entities[currentEntityId].x += 1;
+        if(ptr[2] < playerX + 8)
+            ptr[2] += 1;
 
-        if(entities[currentEntityId].x > entities[playerId].x + 8)
-            entities[currentEntityId].x -= 1;
+        if(ptr[2] > playerX + 8)
+            ptr[2] -= 1;
     }
 
-
-    if(entities[currentEntityId].y > 240) {
+    if(ptr[3] > 240) {
         removeEntity(currentEntityId, &entityList);
         pushEntity(currentEntityId, &freeEntityList);
     }
 
-
-    --entities[currentEntityId].health;
-    if(entities[currentEntityId].health == 0) {
+    // update timer
+    --ptr[4];
+    if(ptr[4] == 0) {
         // stop and shoot
-        entities[currentEntityId].health = 64;
-        entities[currentEntityId].kind = 3;
+        ptr[4] = 64;
+        ptr[5] = 3; // change to shoot state
     }
 
     // test collision
+    /*
     for(i = 0; i < 4; i++) {
-        if(abs(sprites[BULLET_SPRITE + i].x - entities[currentEntityId].x) < 8 && abs(sprites[BULLET_SPRITE + i].y - entities[currentEntityId].y) < 8) {
-            entities[currentEntityId].kind = 2;
-            entities[currentEntityId].health = 0;
+        if(abs(sprites[BULLET_SPRITE + i].x - ptr[2]) < 8 && abs(sprites[BULLET_SPRITE + i].y - ptr[3]) < 8) {
+            ptr[4] = 0;
+            ptr[5] = 2; // burn state
+            sfx_play(0x00, 0x02);
         }
-    }
+    }*/
 
-    drawSprite(entities[currentEntityId].x, entities[currentEntityId].y, ((FrameCount >> 3) & 0x03) +  0x40, 0x01);
+    drawSprite(ptr[2], ptr[3], ((FrameCount >> 3) & 0x03) +  0x40, 0x01);
 }
 
 void knightShootUpdate() {
-    entities[currentEntityId].y += scrollIncrement;
+    static uint8_t *ptr;
+    ptr = (uint8_t *)&entities[currentEntityId];
 
-    --entities[currentEntityId].health;
+    ptr[3] += scrollIncrement;
+
+    --ptr[4];
 
     // shoot arrow
-    if(entities[currentEntityId].health == 32) {
-        spawnArrow(entities[currentEntityId].x, entities[currentEntityId].y);
+    if(ptr[4] == 32) {
+        spawnArrow(ptr[2], ptr[3]);
     }
 
     // and walk again
-    if(entities[currentEntityId].health == 0) {
-        entities[currentEntityId].health = 64;
-        entities[currentEntityId].kind = 1;
+    if(ptr[4] == 0) {
+        ptr[4] = 64;
+        ptr[5] = 1; // change to walk state
     }
 
     // test collision
+    /*
     for(i = 0; i < 4; i++) {
-        if(abs(sprites[BULLET_SPRITE + i].x - entities[currentEntityId].x) < 8 && abs(sprites[BULLET_SPRITE + i].y - entities[currentEntityId].y) < 8) {
-            entities[currentEntityId].kind = 2;
-            entities[currentEntityId].health = 0;
-            sprites[BULLET_SPRITE + i].y = 241;
+        if(abs(sprites[BULLET_SPRITE + i].x - ptr[2]) < 8 && abs(sprites[BULLET_SPRITE + i].y - ptr[3]) < 8) {
+            ptr[4] = 0;
+            ptr[5] = 2; // burn state
+            sfx_play(0x00, 0x02);
         }
-    }
+    }*/
 
-    drawSprite(entities[currentEntityId].x, entities[currentEntityId].y, 0x40, 0x01);
+    drawSprite(ptr[2], ptr[3], 0x40, 0x01);
 }
 
 void spawnKnight(uint8_t x, uint8_t y) {
@@ -443,8 +458,6 @@ void spawnKnight(uint8_t x, uint8_t y) {
         pushEntity(id, &entityList);
         entities[id].x = x;
         entities[id].y = y;
-        entities[id].vx = 0;
-        entities[id].vy = 0;
         entities[id].health = 24;
         entities[id].kind = 1;
     }
@@ -452,99 +465,62 @@ void spawnKnight(uint8_t x, uint8_t y) {
 
 void playerUpdate() {
     static uint8_t pal;
+    static uint8_t spr;
+    static uint8_t *ptr;
+    static uint8_t cx, cy;
 
-    if(InputPort1 & BUTTON_UP) {
-        if (entities[currentEntityId].vy > -2) {
-            entities[currentEntityId].vy -= 1;
-        }
+    if(InputPort1 & BUTTON_UP && playerY > 46) {
+        playerY -= 2;
     }
-    else if(InputPort1 & BUTTON_DOWN) {
-        if (entities[currentEntityId].vy < 2) {
-            entities[currentEntityId].vy += 1;
-        }
-    } else if(entities[currentEntityId].vy > 2) {
-        entities[currentEntityId].vy -= 2;
-    } else if(entities[currentEntityId].vy < -2) {
-        entities[currentEntityId].vy += 2;
-    } else {
-        entities[currentEntityId].vy = 0;
-    }
+    else if(InputPort1 & BUTTON_DOWN && playerY < 224) {
+        playerY += 2;
+    } 
 
-    if(InputPort1 & BUTTON_LEFT) {
-        if (entities[currentEntityId].vx > -2) {
-            --entities[currentEntityId].vx;
-        }
-    } else if(InputPort1 & BUTTON_RIGHT) {
-        if (entities[currentEntityId].vx < 2) {
-            ++entities[currentEntityId].vx;
-        }
-    } else if(entities[currentEntityId].vx > 2) {
-        entities[currentEntityId].vx -= 2;
-    } else if(entities[currentEntityId].vx < -2) {
-        entities[currentEntityId].vx += 2;
-    } else {
-        entities[currentEntityId].vx = 0;
-    }
-
-    if(entities[currentEntityId].vy < 0 && entities[currentEntityId].y + entities[currentEntityId].vy - 16 > entities[currentEntityId].y) {
-        entities[currentEntityId].y = 16;
-        entities[currentEntityId].vy = 0;
-    }
-
-    if(entities[currentEntityId].y + entities[currentEntityId].vy > 218) {
-        entities[currentEntityId].y = 218;
-        entities[currentEntityId].vy = 0;
-    }
-
-    if(entities[currentEntityId].vx < 0 && entities[currentEntityId].x + entities[currentEntityId].vx > entities[currentEntityId].x) {
-        entities[currentEntityId].x = 0;
-        entities[currentEntityId].vx = 0;
-    }
-
-    if(entities[currentEntityId].x + entities[currentEntityId].vx > 240) {
-        entities[currentEntityId].x = 240;
-        entities[currentEntityId].vx = 0;
-    }
-
-
-    entities[currentEntityId].x += entities[currentEntityId].vx;
-    entities[currentEntityId].y += entities[currentEntityId].vy;
+    spr = 0;
+    if(InputPort1 & BUTTON_LEFT && playerX > 0) {
+        playerX -= 2;
+        spr = 2;
+    } else if(InputPort1 & BUTTON_RIGHT && playerX < 240) {
+        playerX += 2;
+        spr = 4;
+    } 
 
     if((InputPort1 & BUTTON_B) && !(InputPort1Prev & BUTTON_B)) {
-        spawnBullet(entities[currentEntityId].x + 4, entities[currentEntityId].y - 8);
+        spawnBullet(playerX + 4, playerY - 8);
     }
 
     // test collision
+    ptr = (uint8_t *)&sprites[ARROW_SPRITE];
     for(i = 0; i < 4; i++) {
-        if(abs(sprites[ARROW_SPRITE + i].x - entities[currentEntityId].x) < 8 && abs(sprites[ARROW_SPRITE + i].y - entities[currentEntityId].y) < 8) {
-            --entities[currentEntityId].health;
+        cx = (8 + ptr[3] - playerX);
+        cy = (8 + ptr[0] - playerY);
+        if(cx < 16 && cy < 16) {
+            --playerHealth;
 
-            sprites[ARROW_SPRITE + i].y = 241;
+            ptr[0] = 241;
 
-            playerBlink = 255;
+            playerBlink = 64;
 
             // Game over
-            if(entities[currentEntityId].health == 0) {
+            if(playerHealth == 0) {
                 endLoop = 1; 
             }
         }
+
+        ptr += 4;
     }
 
-    if((playerBlink & 0x3)) {
-        pal = 0x03;
+    if(playerBlink > 0)
         --playerBlink;
+
+    if(playerBlink & 0x08) {
+        pal = 0x03;
     } else {
         pal = 0x00;
     }
 
     // update player sprites
-    if(entities[currentEntityId].vx > 2) {
-        drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, pal, playerSpriteFrames[((FrameCount >> 3) & 0x01) + 4]);
-    } else if(entities[currentEntityId].vx < -2) {
-        drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, pal, playerSpriteFrames[((FrameCount >> 3) & 0x01) + 2]);
-    } else {
-        drawMetaSprite(entities[currentEntityId].x, entities[currentEntityId].y, pal, playerSpriteFrames[((FrameCount >> 3) & 0x01)]);
-    }
+    drawMetaSprite(playerX, playerY, pal, playerSpriteFrames[((FrameCount >> 3) & 0x01) + spr]);
 }
 
 // load the palette data into PPU memory $3f00-$3f1f
@@ -561,6 +537,9 @@ void loadPalette(const uint8_t *pal) {
  * Unlike C programs on a computer, it takes no arguments and returns no value.
  */
 void main(void) {
+    // pointer for bullets and arrow loop
+    static uint8_t *ptr;
+
     // reset APU
     APU.status = 0x0F;
 
@@ -580,6 +559,8 @@ titleScreen:
 
     // enable NMI and rendering
     PPU.control = PPUCTRL_NAMETABLE_0 | PPUCTRL_INC_1_HORIZ | PPUCTRL_BPATTERN_0 | PPUCTRL_SPATTERN_1 | PPUCTRL_NMI_ON;
+
+    music_play(0x00);
 
     endLoop = 0;
     while (!endLoop) {
@@ -625,14 +606,9 @@ titleScreen:
     initEntityList();
     fillBackground();
 
-    playerId = popEntity(&freeEntityList);
-    pushEntity(playerId, &entityList);
-    entities[playerId].x = 64;
-    entities[playerId].y = 128;
-    entities[playerId].vx = 0;
-    entities[playerId].vy = 0;
-    entities[playerId].health = 8;
-    entities[playerId].kind = 0;
+    playerX = 64;
+    playerY = 128;
+    playerHealth = 8;
 
     // tells the NMI to update
     VRAMUpdateReady = 1;
@@ -682,6 +658,9 @@ titleScreen:
             }
         }
 
+        // update player
+        playerUpdate();
+
         // update game entity
         currentEntityId = entityList;
         while(currentEntityId != 0xFF) {
@@ -708,17 +687,23 @@ titleScreen:
         }
 
         // update bullet
+        ptr = (uint8_t *)&sprites[BULLET_SPRITE];
         for(i = 0; i < 4; ++i) {
-            if(sprites[BULLET_SPRITE + i].y < 240) {
-                sprites[BULLET_SPRITE + i].y -= 4; 
+            if(ptr[0] < 240) {
+                ptr[0] -= 4; 
             }
+
+            ptr += 4;
         }
 
         // update arrows 
+        ptr = (uint8_t *)&sprites[ARROW_SPRITE];
         for(i = 0; i < 4; ++i) {
-            if(sprites[ARROW_SPRITE + i].y <= 240) {
-                sprites[ARROW_SPRITE + i].y += 2; 
+            if(ptr[0] <= 240) {
+                ptr[0] += 2; 
             }
+
+            ptr += 4;
         }
 
         // clean up unused sprites
